@@ -70,6 +70,7 @@ def load_data():
     return X_train, y_train, X_test, y_test
 
 
+
 # -------------------------
 # 2. Neural Network Model Definition
 # -------------------------
@@ -184,7 +185,30 @@ class FlowerClient(NumPyClient):
 
 
 def client_fn(context: Context):
-    """Create and return an instance of Flower `Client`."""
+    """
+    Create and return an instance of Flower `Client`.
+    No need to pass a context since this code is only for one client.
+    """
+    
+    # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
+    X_train, y_train, X_test, y_test = load_data()
+
+    # Crear un TensorDataset
+    train_dataset = TensorDataset(X_train, y_train)
+    test_dataset = TensorDataset(X_test, y_test)
+    
+    # Crear un DataLoader
+    batch_size = 16
+    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    # Crear el modelo de red neuroanl
+    input_size = X_train.shape[1]
+    hidden_size1 = 5
+    hidden_size2 = 5
+    output_size = 1
+    net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
+    
     return FlowerClient(net, trainloader, testloader).to_client()
 
 
@@ -194,33 +218,13 @@ def client_fn(context: Context):
 # -------------------------
 
 if __name__ == "__main__":
-    # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
-    X_train, y_train, X_test, y_test = load_data()
-
-    # Crear un TensorDataset
-    train_dataset = TensorDataset(X_train, y_train)
-    test_dataset = TensorDataset(X_test, y_test)
-
-    # Crear un DataLoader
-    batch_size = 16
-    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
-
-    # Definir los parámetros del modelo
-    input_size = X_train.shape[1]
-    hidden_size1 = 5
-    hidden_size2 = 5
-    output_size = 1
-
-    # Crear el modelo
-    net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
-
-
-    # Lanzar cliente
+    print()
     server_ip = input("SERVER IP: ")
     server_port = input("SERVER PORT: ")
-    server_address = f"{server_ip}:{server_port}"
+    server_address = f"{server_ip}:{server_port}"    
+    print()
+    
     start_client(
         server_address=server_address,
-        client=FlowerClient(net, trainloader, testloader).to_client(),
+        client=client_fn(None),
     )
