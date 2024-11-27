@@ -23,7 +23,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 strategy = FedAvg(
     evaluate_metrics_aggregation_fn=weighted_average,
     min_fit_clients=1, # 1 client minimum     
-    min_available_clients=2  # cambiar cuando solo quiera probar con un único cliente, cambiar 2
+    min_available_clients=4  # cambiar cuando solo quiera probar con un único cliente, cambiar 2
 )
 
 # Define config
@@ -40,9 +40,8 @@ app = ServerApp(
 # Legacy mode
 if __name__ == "__main__":
     
-    server_ip = input("IP: ") 
-    server_port = input("PORT: ") 
-
+    server_ip = input("SERVER IP: ") 
+    server_port = input("SERVER PORT: ") 
     server_address = f"{server_ip}:{server_port}"
 
     start_server(

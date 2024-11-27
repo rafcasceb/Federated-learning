@@ -15,20 +15,11 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 
-def load_data():
-    excel_file_name = "PI-CAI_3_parte1.xlsx" 
-    temp_csv_file_name = "temp_database1.csv"
-    
-    # Leer el archivo Excel y convertirlo a CSV
-    data_excel = pd.read_excel(excel_file_name)
-    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
-    
-    # Leer el CSV
-    data = pd.read_csv(temp_csv_file_name, sep=";")
-    ## print(f"Filas cargadas inicialmente: {data.shape[0]}")
-    
-    
-    # Reemplazar comas por puntos en todas las columnas
+# -------------------------
+# 1. Data Preparation
+# -------------------------
+
+def preprocess_data(data):
     for col in data.columns:
         data[col] = data[col].astype(str).str.replace(',', '.')
     
@@ -36,29 +27,31 @@ def load_data():
     
     for col in data.columns:
         data[col] = pd.to_numeric(data[col], errors='coerce')
-    
-    # print("Nombres de las columnas:", data.columns)
 
-    # Verificar si se han generado valores NaN en las columnas
+    # Replace NaN values with column medians
     if data.isnull().sum().sum() > 0:
-        # print("Advertencia: Se han encontrado valores NaN después de convertir las columnas a numéricas.")
-        # print(f"Filas con NaN:\n{data[data.isnull().any(axis=1)]}")
-        
-        # Rellenar los NaN con la mediana de cada columna
         data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
-        # print(f"Filas después de rellenar NaN con la mediana: {data.shape[0]}")
-        
-    print(data)
 
-    # Mezclar los datos
+    print(data)
     data_shuffled = shuffle(data)
+    return data_shuffled
+    
+    
+
+def load_data():
+    excel_file_name = "PI-CAI_3_parte3.xlsx" 
+    temp_csv_file_name = "temp_database3.csv"
+    
+    # Leer el archivo Excel y convertirlo a CSV por comodidad
+    data_excel = pd.read_excel(excel_file_name)
+    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
+    data = pd.read_csv(temp_csv_file_name, sep=";")    
+    
+    data = preprocess_data(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data_shuffled.iloc[:, :-1].values  # Características de entrada
-    y = data_shuffled.iloc[:, -1].values   # Característica de salida
-    
-    # print(f"Número de columnas en los datos: {data_shuffled.shape[1]}")
-    # print(f"El número de columnas de X es: {X.shape[1]}")
+    X = data.iloc[:, :-1].values  # Características de entrada (features)
+    y = data.iloc[:, -1].values   # Característica de salida (labels)
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -78,24 +71,32 @@ def load_data():
 
 
 
-# Red neuronal
-class Net(nn.Module):
+# -------------------------
+# 2. Neural Network Model Definition
+# -------------------------
+
+class NeuralNetwork(nn.Module):
+
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
-        super(Net, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size1)   # Fully connected layer 1
-        self.relu = nn.ReLU()                            # Activation function
-        self.fc2 = nn.Linear(hidden_size1, hidden_size2) # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_size2, output_size)  # Fully connected layer 3
+        super(NeuralNetwork, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size1)    # Fully connected layer 1
+        self.fc2 = nn.Linear(hidden_size1, hidden_size2)  # Fully connected layer 2
+        self.fc3 = nn.Linear(hidden_size2, output_size)   # Fully connected layer 3
+        self.relu = nn.ReLU()                             # Activation function
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        return x
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        out = self.relu(out)
+        out = self.fc3(out)
+        return out
 
 
+
+# -------------------------
+# 3. Training and Evaluation
+# -------------------------
 
 def train(model, train_data, epochs=10):
     learning_rate = 0.001
@@ -103,7 +104,7 @@ def train(model, train_data, epochs=10):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     for epoch in range(epochs):
-        model.train()  # Entrenar el modelo
+        model.train()
         total_loss = 0.0
         
         for inputs, labels in train_data:
@@ -134,89 +135,96 @@ def test(model, test_data):
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
-            outputs = model(inputs)
-            loss = F.binary_cross_entropy_with_logits(outputs.squeeze(), labels)
+            outputs = model(inputs).squeeze()
+            loss = F.binary_cross_entropy_with_logits(outputs, labels)
             total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
             
             # Convertir las predicciones a binario (0 o 1)
-            predicted = (outputs.squeeze() > 0.5).float()  
-            batch_accuracy = accuracy_score(labels.numpy(), predicted.detach().numpy())
+            predictions = (outputs > 0.5).float()
+            batch_accuracy = accuracy_score(labels.numpy(), predictions.detach().numpy())
             total_accuracy += batch_accuracy * labels.size(0)  
-            
             total_samples += labels.size(0)
     
     # Calcular la pérdida y precisión promedio
-    overall_loss = total_loss / total_samples
-    overall_accuracy = total_accuracy / total_samples
+    avg_loss = total_loss / total_samples
+    avg_accuracy = total_accuracy / total_samples
+    print(f'Loss on test set: {avg_loss:.4f}, Accuracy on test set: {avg_accuracy*100:.2f}%')
     
-    print(f'Loss on test set: {overall_loss:.4f}, Accuracy on test set: {overall_accuracy*100:.2f}%')
-    
-    return overall_loss, overall_accuracy 
+    return avg_loss, avg_accuracy 
 
 
 
-# Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
-X_train, y_train, X_test, y_test = load_data()
+# -------------------------
+# 4. Federated Learning Client
+# -------------------------
 
-# Crear un TensorDataset
-train_dataset = TensorDataset(X_train, y_train)
-test_dataset = TensorDataset(X_test, y_test)
-
-# Crear un DataLoader
-trainloader = DataLoader(train_dataset, batch_size=16, shuffle=True)        # !!! el batch size es la x de mat1(x,y)
-testloader = DataLoader(test_dataset, batch_size=16, shuffle=True)          # !!! aquí igual
-
-# Definir los parámetros del modelo
-input_size = X_train.shape[1]      # !!! aquí la x de mat2(x,y)   (num columnas - 1)
-hidden_size1 = 5                    # !!! aquí la y de mat2(x,y)
-hidden_size2 = 5
-output_size = 1
-
-# Crear el modelo
-net = Net(input_size, hidden_size1, hidden_size2, output_size)
-
-
-
-# Definir el cliente de flower
 class FlowerClient(NumPyClient):
+    
+    def __init__(self, net, trainloader, testloader):
+        self.net = net
+        self.trainloader = trainloader
+        self.testloader = testloader
+    
     def get_parameters(self, config):
-        return [val.cpu().numpy() for _, val in net.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters):
-        params_dict = zip(net.state_dict().keys(), parameters)
+        params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        ## net.load_state_dict(state_dict)
+        self.net.load_state_dict(state_dict)
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        train(net, trainloader, epochs=1)
-        return self.get_parameters(config={}), len(trainloader.dataset), {}
+        train(self.net, self.trainloader, epochs=1)
+        return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(net, testloader)
-        return loss, len(testloader.dataset), {"accuracy": accuracy}
-
+        loss, accuracy = test(self.net, self.testloader)
+        return loss, len(self.testloader.dataset), {"accuracy": accuracy}
 
 
 def client_fn(context: Context):
-    """Create and return an instance of Flower `Client`."""
-    return FlowerClient().to_client()
+    """
+    Create and return an instance of Flower `Client`.
+    No need to pass a context since this code is only for one client.
+    """
+    
+    # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
+    X_train, y_train, X_test, y_test = load_data()
+
+    # Crear un TensorDataset
+    train_dataset = TensorDataset(X_train, y_train)
+    test_dataset = TensorDataset(X_test, y_test)
+    
+    # Crear un DataLoader
+    batch_size = 16
+    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    # Crear el modelo de red neuroanl
+    input_size = X_train.shape[1]
+    hidden_size1 = 5
+    hidden_size2 = 5
+    output_size = 1
+    net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
+    
+    return FlowerClient(net, trainloader, testloader).to_client()
 
 
 
-# INICIAR CLIENTE 1
+# -------------------------
+# 5. Main Execution
+# -------------------------
+
 if __name__ == "__main__":
-
-    # Solicitar la IP y el puerto desde la terminal
-    server_ip = input("IP: ")
-    server_port = input("PORT: ")
-
-    # Construir la dirección del servidor
-    server_address = f"{server_ip}:{server_port}"
-
-    # Iniciar el cliente de Flower con la dirección proporcionada
+    print()
+    server_ip = input("SERVER IP: ")
+    server_port = input("SERVER PORT: ")
+    server_address = f"{server_ip}:{server_port}"    
+    print()
+    
     start_client(
         server_address=server_address,
-        client=FlowerClient().to_client(),
+        client=client_fn(None),
     )
