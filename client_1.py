@@ -29,9 +29,7 @@ def preprocess_data(data):
         data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
 
     print(data)
-
     data_shuffled = shuffle(data)
-    
     return data_shuffled
     
     
@@ -48,8 +46,8 @@ def load_data():
     data = preprocess_data(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data.iloc[:, :-1].values  # Características de entrada
-    y = data.iloc[:, -1].values   # Característica de salida
+    X = data.iloc[:, :-1].values  # Características de entrada (features)
+    y = data.iloc[:, -1].values   # Característica de salida (labels)
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -71,6 +69,7 @@ def load_data():
 
 # Red neuronal
 class NeuralNetwork(nn.Module):
+
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
         super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size1)   # Fully connected layer 1
@@ -94,7 +93,7 @@ def train(model, train_data, epochs=10):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     for epoch in range(epochs):
-        model.train()  # Entrenar el modelo
+        model.train()
         total_loss = 0.0
         
         for inputs, labels in train_data:
@@ -125,89 +124,87 @@ def test(model, test_data):
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
-            outputs = model(inputs)
-            loss = F.binary_cross_entropy_with_logits(outputs.squeeze(), labels)
+            outputs = model(inputs).squeeze()
+            loss = F.binary_cross_entropy_with_logits(outputs, labels)
             total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
             
             # Convertir las predicciones a binario (0 o 1)
-            predicted = (outputs.squeeze() > 0.5).float()  
-            batch_accuracy = accuracy_score(labels.numpy(), predicted.detach().numpy())
+            predictions = (outputs > 0.5).float()
+            batch_accuracy = accuracy_score(labels.numpy(), predictions.detach().numpy())
             total_accuracy += batch_accuracy * labels.size(0)  
-            
             total_samples += labels.size(0)
     
     # Calcular la pérdida y precisión promedio
-    overall_loss = total_loss / total_samples
-    overall_accuracy = total_accuracy / total_samples
+    avg_loss = total_loss / total_samples
+    avg_accuracy = total_accuracy / total_samples
+    print(f'Loss on test set: {avg_loss:.4f}, Accuracy on test set: {avg_accuracy*100:.2f}%')
     
-    print(f'Loss on test set: {overall_loss:.4f}, Accuracy on test set: {overall_accuracy*100:.2f}%')
-    
-    return overall_loss, overall_accuracy 
+    return avg_loss, avg_accuracy 
 
 
 
-# Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
-X_train, y_train, X_test, y_test = load_data()
-
-# Crear un TensorDataset
-train_dataset = TensorDataset(X_train, y_train)
-test_dataset = TensorDataset(X_test, y_test)
-
-# Crear un DataLoader
-trainloader = DataLoader(train_dataset, batch_size=16, shuffle=True)        # !!! el batch size es la x de mat1(x,y)
-testloader = DataLoader(test_dataset, batch_size=16, shuffle=True)          # !!! aquí igual
-
-# Definir los parámetros del modelo
-input_size = X_train.shape[1]      # !!! aquí la x de mat2(x,y)   (num columnas - 1)
-hidden_size1 = 5                    # !!! aquí la y de mat2(x,y)
-hidden_size2 = 5
-output_size = 1
-
-# Crear el modelo
-net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
-
-
-
-# Definir el cliente de flower
 class FlowerClient(NumPyClient):
+    
+    def __init__(self, net, trainloader, testloader):
+        self.net = net
+        self.trainloader = trainloader
+        self.testloader = testloader
+    
     def get_parameters(self, config):
-        return [val.cpu().numpy() for _, val in net.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters):
-        params_dict = zip(net.state_dict().keys(), parameters)
+        params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        net.load_state_dict(state_dict)
+        self.net.load_state_dict(state_dict)
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        train(net, trainloader, epochs=1)
-        return self.get_parameters(config={}), len(trainloader.dataset), {}
+        train(self.net, self.trainloader, epochs=1)
+        return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(net, testloader)
-        return loss, len(testloader.dataset), {"accuracy": accuracy}
+        loss, accuracy = test(self.net, self.testloader)
+        return loss, len(self.testloader.dataset), {"accuracy": accuracy}
 
 
 
 def client_fn(context: Context):
     """Create and return an instance of Flower `Client`."""
-    return FlowerClient().to_client()
+    return FlowerClient(net, trainloader, testloader).to_client()
 
 
 
 # INICIAR CLIENTE 1
 if __name__ == "__main__":
+    # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
+    X_train, y_train, X_test, y_test = load_data()
 
-    # Solicitar la IP y el puerto desde la terminal
-    server_ip = input("IP: ")
-    server_port = input("PORT: ")
+    # Crear un TensorDataset
+    train_dataset = TensorDataset(X_train, y_train)
+    test_dataset = TensorDataset(X_test, y_test)
 
-    # Construir la dirección del servidor
+    # Crear un DataLoader
+    batch_size = 16
+    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    # Definir los parámetros del modelo
+    input_size = X_train.shape[1]
+    hidden_size1 = 5
+    hidden_size2 = 5
+    output_size = 1
+
+    # Crear el modelo
+    net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
+
+
+    # Lanzar cliente
+    server_ip = input("SERVER IP: ")
+    server_port = input("SERVER PORT: ")
     server_address = f"{server_ip}:{server_port}"
-
-    # Iniciar el cliente de Flower con la dirección proporcionada
     start_client(
         server_address=server_address,
-        client=FlowerClient().to_client(),
+        client=FlowerClient(net, trainloader, testloader).to_client(),
     )
