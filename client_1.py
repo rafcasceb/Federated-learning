@@ -15,20 +15,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 
-def load_data():
-    excel_file_name = "PI-CAI_3_parte1.xlsx" 
-    temp_csv_file_name = "temp_database1.csv"
-    
-    # Leer el archivo Excel y convertirlo a CSV
-    data_excel = pd.read_excel(excel_file_name)
-    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
-    
-    # Leer el CSV
-    data = pd.read_csv(temp_csv_file_name, sep=";")
-    ## print(f"Filas cargadas inicialmente: {data.shape[0]}")
-    
-    
-    # Reemplazar comas por puntos en todas las columnas
+def preprocess_data(data):
     for col in data.columns:
         data[col] = data[col].astype(str).str.replace(',', '.')
     
@@ -36,29 +23,33 @@ def load_data():
     
     for col in data.columns:
         data[col] = pd.to_numeric(data[col], errors='coerce')
-    
-    # print("Nombres de las columnas:", data.columns)
 
-    # Verificar si se han generado valores NaN en las columnas
+    # Replace NaN values with column medians
     if data.isnull().sum().sum() > 0:
-        # print("Advertencia: Se han encontrado valores NaN después de convertir las columnas a numéricas.")
-        # print(f"Filas con NaN:\n{data[data.isnull().any(axis=1)]}")
-        
-        # Rellenar los NaN con la mediana de cada columna
         data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
-        # print(f"Filas después de rellenar NaN con la mediana: {data.shape[0]}")
-        
+
     print(data)
 
-    # Mezclar los datos
     data_shuffled = shuffle(data)
+    
+    return data_shuffled
+    
+    
+
+def load_data():
+    excel_file_name = "PI-CAI_3_parte1.xlsx" 
+    temp_csv_file_name = "temp_database1.csv"
+    
+    # Leer el archivo Excel y convertirlo a CSV por comodidad
+    data_excel = pd.read_excel(excel_file_name)
+    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
+    data = pd.read_csv(temp_csv_file_name, sep=";")    
+    
+    data = preprocess_data(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data_shuffled.iloc[:, :-1].values  # Características de entrada
-    y = data_shuffled.iloc[:, -1].values   # Característica de salida
-    
-    # print(f"Número de columnas en los datos: {data_shuffled.shape[1]}")
-    # print(f"El número de columnas de X es: {X.shape[1]}")
+    X = data.iloc[:, :-1].values  # Características de entrada
+    y = data.iloc[:, -1].values   # Característica de salida
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -79,21 +70,21 @@ def load_data():
 
 
 # Red neuronal
-class Net(nn.Module):
+class NeuralNetwork(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
-        super(Net, self).__init__()
+        super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size1)   # Fully connected layer 1
-        self.relu = nn.ReLU()                            # Activation function
         self.fc2 = nn.Linear(hidden_size1, hidden_size2) # Fully connected layer 2
         self.fc3 = nn.Linear(hidden_size2, output_size)  # Fully connected layer 3
+        self.relu = nn.ReLU()                            # Activation function
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        return x
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        out = self.relu(out)
+        out = self.fc3(out)
+        return out
 
 
 
@@ -173,7 +164,7 @@ hidden_size2 = 5
 output_size = 1
 
 # Crear el modelo
-net = Net(input_size, hidden_size1, hidden_size2, output_size)
+net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
 
 
 
