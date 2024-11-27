@@ -15,6 +15,10 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 
+# -------------------------
+# 1. Data Preparation
+# -------------------------
+
 def preprocess_data(data):
     for col in data.columns:
         data[col] = data[col].astype(str).str.replace(',', '.')
@@ -66,16 +70,18 @@ def load_data():
     return X_train, y_train, X_test, y_test
 
 
+# -------------------------
+# 2. Neural Network Model Definition
+# -------------------------
 
-# Red neuronal
 class NeuralNetwork(nn.Module):
 
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
         super(NeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size1)   # Fully connected layer 1
-        self.fc2 = nn.Linear(hidden_size1, hidden_size2) # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_size2, output_size)  # Fully connected layer 3
-        self.relu = nn.ReLU()                            # Activation function
+        self.fc1 = nn.Linear(input_size, hidden_size1)    # Fully connected layer 1
+        self.fc2 = nn.Linear(hidden_size1, hidden_size2)  # Fully connected layer 2
+        self.fc3 = nn.Linear(hidden_size2, output_size)   # Fully connected layer 3
+        self.relu = nn.ReLU()                             # Activation function
 
     def forward(self, x):
         out = self.fc1(x)
@@ -86,6 +92,10 @@ class NeuralNetwork(nn.Module):
         return out
 
 
+
+# -------------------------
+# 3. Training and Evaluation
+# -------------------------
 
 def train(model, train_data, epochs=10):
     learning_rate = 0.001
@@ -143,6 +153,10 @@ def test(model, test_data):
 
 
 
+# -------------------------
+# 4. Federated Learning Client
+# -------------------------
+
 class FlowerClient(NumPyClient):
     
     def __init__(self, net, trainloader, testloader):
@@ -169,14 +183,16 @@ class FlowerClient(NumPyClient):
         return loss, len(self.testloader.dataset), {"accuracy": accuracy}
 
 
-
 def client_fn(context: Context):
     """Create and return an instance of Flower `Client`."""
     return FlowerClient(net, trainloader, testloader).to_client()
 
 
 
-# INICIAR CLIENTE 1
+# -------------------------
+# 5. Main Execution
+# -------------------------
+
 if __name__ == "__main__":
     # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
     X_train, y_train, X_test, y_test = load_data()
