@@ -16,23 +16,23 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 def load_data():
-    # Cargar el archivo excel
-    excel_file = "PI-CAI_3_parte2.xlsx"
-    csv_file = "temp_database2.csv"
+    excel_file_name = "PI-CAI_3_parte1.xlsx" 
+    temp_csv_file_name = "temp_database1.csv"
     
-    # Leer el archivo excel
-    data_excel = pd.read_excel(excel_file)
-    data_excel.to_csv(csv_file, sep=";", index=False)
+    # Leer el archivo Excel y convertirlo a CSV
+    data_excel = pd.read_excel(excel_file_name)
+    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
     
-    # Leer los datos con el separador ;
-    data = pd.read_csv(csv_file, sep=";")
-    # print(f"Filas cargadas inicialmente: {data.shape[0]}")
+    # Leer el CSV
+    data = pd.read_csv(temp_csv_file_name, sep=";")
+    ## print(f"Filas cargadas inicialmente: {data.shape[0]}")
     
+    
+    # Reemplazar comas por puntos en todas las columnas
     for col in data.columns:
-        # Reemplazar comas por puntos en todas las columnas
         data[col] = data[col].astype(str).str.replace(',', '.')
     
-    data['case_csPCa'] = data['case_csPCa'].replace({'YES': 1, 'NO': 0})
+    data['case_csPCa'] = data['case_csPCa'].map({'YES': 1, 'NO': 0}).astype(int)
     
     for col in data.columns:
         data[col] = pd.to_numeric(data[col], errors='coerce')
@@ -48,20 +48,17 @@ def load_data():
         data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
         # print(f"Filas después de rellenar NaN con la mediana: {data.shape[0]}")
         
-    # Eliminar columnas no deseadas
-    datos_filtrados = data.drop(columns=['mri_date', 'histopath_type', 'lesion_GS'])
-    # print(f"Filas después de eliminar columnas no deseadas: {datos_filtrados.shape[0]}")
-    print(datos_filtrados)
+    print(data)
 
     # Mezclar los datos
-    data1 = shuffle(datos_filtrados)
+    data_shuffled = shuffle(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data1.iloc[:, :-1].values  # Características de entrada
-    y = data1.iloc[:, -1].values   # Característica de salida
+    X = data_shuffled.iloc[:, :-1].values  # Características de entrada
+    y = data_shuffled.iloc[:, -1].values   # Característica de salida
     
-    print(f"Número de columnas en los datos: {data1.shape[1]}")
-    print(f"El número de columnas de X es: {X.shape[1]}")
+    # print(f"Número de columnas en los datos: {data_shuffled.shape[1]}")
+    # print(f"El número de columnas de X es: {X.shape[1]}")
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -133,13 +130,13 @@ def test(model, test_data):
             # Reemplazar NaN en las etiquetas por -1 (o cualquier valor que decidas)
             labels = torch.nan_to_num(labels, nan=-1)
             
-            # Reemplazar NaN en los inputs por 0 (si es necesario)
+            # Reemplazar NaN en los inputs por 0  (si es necesario)
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
             outputs = model(inputs)
             loss = F.binary_cross_entropy_with_logits(outputs.squeeze(), labels)
-            total_loss += loss.item() * inputs.size(0)  
+            total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
             
             # Convertir las predicciones a binario (0 o 1)
             predicted = (outputs.squeeze() > 0.5).float()  
@@ -154,7 +151,7 @@ def test(model, test_data):
     
     print(f'Loss on test set: {overall_loss:.4f}, Accuracy on test set: {overall_accuracy*100:.2f}%')
     
-    return overall_loss, overall_accuracy  
+    return overall_loss, overall_accuracy 
 
 
 
@@ -166,12 +163,12 @@ train_dataset = TensorDataset(X_train, y_train)
 test_dataset = TensorDataset(X_test, y_test)
 
 # Crear un DataLoader
-trainloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-testloader = DataLoader(test_dataset, batch_size=16, shuffle=True)
+trainloader = DataLoader(train_dataset, batch_size=16, shuffle=True)        # !!! el batch size es la x de mat1(x,y)
+testloader = DataLoader(test_dataset, batch_size=16, shuffle=True)          # !!! aquí igual
 
 # Definir los parámetros del modelo
-input_size = 8
-hidden_size1 = 5
+input_size = X_train.shape[1]      # !!! aquí la x de mat2(x,y)   (num columnas - 1)
+hidden_size1 = 5                    # !!! aquí la y de mat2(x,y)
 hidden_size2 = 5
 output_size = 1
 
@@ -180,6 +177,7 @@ net = Net(input_size, hidden_size1, hidden_size2, output_size)
 
 
 
+# Definir el cliente de flower
 class FlowerClient(NumPyClient):
     def get_parameters(self, config):
         return [val.cpu().numpy() for _, val in net.state_dict().items()]
@@ -187,7 +185,7 @@ class FlowerClient(NumPyClient):
     def set_parameters(self, parameters):
         params_dict = zip(net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-  
+        ## net.load_state_dict(state_dict)
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
@@ -207,9 +205,9 @@ def client_fn(context: Context):
 
 
 
-# INICIAR CLIENTE 2
+# INICIAR CLIENTE 1
 if __name__ == "__main__":
-    
+
     # Solicitar la IP y el puerto desde la terminal
     server_ip = input("IP: ")
     server_port = input("PORT: ")
