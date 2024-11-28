@@ -50,8 +50,8 @@ def load_data():
     data = preprocess_data(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data.iloc[:, :-1].values  # Características de entrada (features)
-    y = data.iloc[:, -1].values   # Característica de salida (labels)
+    X = data.iloc[:, :-1].values  # Características de entrada (inputs / features)
+    y = data.iloc[:, -1].values   # Característica de salida (outputs / labels)
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

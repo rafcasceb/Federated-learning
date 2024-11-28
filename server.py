@@ -15,7 +15,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
 
     # Aggregate and return custom metric (weighted average)
-    return {"accuracy": sum(accuracies) / sum(examples)}
+    average_accuracy = sum(accuracies) / sum(examples)
+    return {"average accuracy": average_accuracy}
 
 
 
@@ -27,7 +28,10 @@ strategy = FedAvg(
 )
 
 # Define config
-config = ServerConfig(num_rounds=30, round_timeout=600)
+config = ServerConfig(
+    num_rounds=30,
+    round_timeout=600
+)
 
 # Flower ServerApp
 app = ServerApp(
