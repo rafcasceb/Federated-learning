@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from flwr.client import ClientApp, NumPyClient, start_client
 from flwr.common import Context
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
@@ -125,6 +125,8 @@ def test(model, test_data):
     total_loss = 0.0
     total_accuracy = 0.0
     total_samples = 0
+    all_labels = []
+    all_predictions = []
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
@@ -144,13 +146,31 @@ def test(model, test_data):
             batch_accuracy = accuracy_score(labels.numpy(), predictions.detach().numpy())
             total_accuracy += batch_accuracy * labels.size(0)  
             total_samples += labels.size(0)
+            
+            all_labels.extend(labels.numpy())
+            all_predictions.extend(predictions.numpy())
     
-    # Calcular la pérdida y precisión promedio
-    avg_loss = total_loss / total_samples
-    avg_accuracy = total_accuracy / total_samples
-    print(f'Loss on test set: {avg_loss:.4f}, Accuracy on test set: {avg_accuracy*100:.2f}%')
+    # Calcular métricas promedio
+    custom_loss = total_loss / total_samples
+    custom_accuracy = total_accuracy / total_samples
     
-    return avg_loss, avg_accuracy 
+    accuracy = accuracy_score(all_labels, all_predictions)
+    precision = precision_score(all_labels, all_predictions, zero_division=0)
+    recall = recall_score(all_labels, all_predictions, zero_division=0)
+    f1 = f1_score(all_labels, all_predictions, zero_division=0)
+    
+    metrics = {"custom_accuracy": custom_accuracy,
+               "accuracy": accuracy,
+               "precision": precision,
+               "recall": recall,
+               "f1_score": f1}
+    
+    print(f'Loss on test set: {custom_loss:.4f}, Accuracy on test set: {custom_accuracy*100:.2f}%')
+    
+    print(f'Loss: {custom_loss:.4f}, Custom Accuracy: {custom_accuracy:.2f}, Accuracy: {accuracy:.2f}, '
+          f'Precision: {precision:.2f}, Recall: {recall:.2f}, F1 Score: {f1:.2f}')
+    
+    return custom_loss, metrics 
 
 
 
@@ -180,8 +200,9 @@ class FlowerClient(NumPyClient):
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(self.net, self.testloader)
-        return loss, len(self.testloader.dataset), {"accuracy": accuracy}
+        loss, metrics = test(self.net, self.testloader)
+        num_examples = len(self.testloader.dataset)
+        return loss, num_examples, metrics
 
 
 def client_fn(context: Context):

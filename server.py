@@ -6,17 +6,25 @@ from flwr.server.strategy import FedAvg
 
 
 
-#netstat -na | grep 8080
-
-# Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    # Multiply accuracy of each client by number of examples used
+    custom_accuracies = [num_examples * m["custom_accuracy"] for num_examples, m in metrics]
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-    examples = [num_examples for num_examples, _ in metrics]
+    precisions = [num_examples * m["precision"] for num_examples, m in metrics]
+    recalls = [num_examples * m["recall"] for num_examples, m in metrics]
+    f1_scores = [num_examples * m["f1_score"] for num_examples, m in metrics]
+    
+    num_examples_list = [num_examples for num_examples, _ in metrics]
+    total_num_examples = sum(num_examples_list)
 
-    # Aggregate and return custom metric (weighted average)
-    average_accuracy = sum(accuracies) / sum(examples)
-    return {"average accuracy": average_accuracy}
+    metrics = {
+        "custom_accuracy": sum(custom_accuracies) / total_num_examples,
+        "accuracy": sum(accuracies) / total_num_examples,
+        "precision": sum(precisions) / total_num_examples,
+        "recall": sum(recalls) / total_num_examples,
+        "f1_score": sum(f1_scores) / total_num_examples,
+    }
+    
+    return metrics
 
 
 
@@ -24,7 +32,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 strategy = FedAvg(
     evaluate_metrics_aggregation_fn=weighted_average,
     min_fit_clients=1, # 1 client minimum     
-    min_available_clients=4  # cambiar cuando solo quiera probar con un único cliente, cambiar 2
+    min_available_clients=2  # cambiar cuando solo quiera probar con un único cliente, cambiar 2
 )
 
 # Define config
