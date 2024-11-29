@@ -5,6 +5,9 @@ from flwr.server import ServerApp, ServerConfig, start_server
 from flwr.server.strategy import FedAvg
 
 
+# -------------------------
+# 1. Obtain metrics
+# -------------------------
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
@@ -26,11 +29,16 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 
+
+# -------------------------
+# 2. Configure server
+# -------------------------
+
 # Define strategy with updated parameters
 strategy = FedAvg(
     evaluate_metrics_aggregation_fn=weighted_average,
     min_fit_clients=2,       # minimum of clients in a round   
-    min_available_clients=4  # minimum of clients to stablish connection (cambiar para testear)
+    min_available_clients=2  # minimum of clients to stablish connection (cambiar para testear)
 )
 
 # Define config
@@ -39,7 +47,7 @@ config = ServerConfig(
     round_timeout=600
 )
 
-# Flower ServerApp
+# Flower ServerApp (no se usa parece)
 app = ServerApp(
     config=config,
     strategy=strategy,
@@ -47,7 +55,10 @@ app = ServerApp(
 
 
 
-# Legacy mode
+# -------------------------
+# 3. Main Execution (legacy mode)
+# -------------------------
+
 if __name__ == "__main__":
     
     server_ip = input("SERVER IP: ") 

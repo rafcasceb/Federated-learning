@@ -79,12 +79,12 @@ def load_data():
 
 class NeuralNetwork(nn.Module):
 
-    def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
+    def __init__(self, input_size, hidden_sizes, output_size):
         super(NeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size1)    # Fully connected layer 1
-        self.fc2 = nn.Linear(hidden_size1, hidden_size2)  # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_size2, output_size)   # Fully connected layer 3
-        self.relu = nn.ReLU()                             # Activation function
+        self.fc1 = nn.Linear(input_size, hidden_sizes[0])       # Fully connected layer 1
+        self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])  # Fully connected layer 2
+        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3
+        self.relu = nn.ReLU()                                   # Activation function
 
     def forward(self, x):
         out = self.fc1(x)
@@ -124,6 +124,7 @@ def train(model, train_data, epochs=10):
 
 def test(model, test_data):
     model.eval()  # Modo de evaluación
+    binarization_threshold = 0.4
     total_loss = 0.0
     total_samples = 0
     all_labels = []
@@ -136,14 +137,15 @@ def test(model, test_data):
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
-            outputs = model(inputs).squeeze()
+            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation
+            ## print("Raw outputs:", outputs)
+            predictions = (outputs > binarization_threshold).float()  # Predecir en binario
+            ## print("Binary outputs (predictions):", predictions)
+            predictions = torch.nan_to_num(predictions, nan=0)
+            
+            # Colecionar labels y predicciones
             loss = F.binary_cross_entropy_with_logits(outputs, labels)
             total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
-            
-            # Convertir las predicciones a binario (0 o 1) y preparar métricas
-            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation
-            predictions = (outputs > 0.5).float()
-            predictions = torch.nan_to_num(predictions, nan=0)
             total_samples += labels.size(0)
             all_labels.extend(labels.numpy())
             all_predictions.extend(predictions.detach().numpy())
@@ -151,9 +153,9 @@ def test(model, test_data):
     # Calcular métricas promedio
     loss = total_loss / total_samples
     accuracy = accuracy_score(all_labels, all_predictions)
-    precision = precision_score(all_labels, all_predictions, zero_division=0)
-    recall = recall_score(all_labels, all_predictions, zero_division=0)
-    f1 = f1_score(all_labels, all_predictions, zero_division=0)
+    precision = precision_score(all_labels, all_predictions, zero_division=0)     # true_positives / (true_positives + false_positives)
+    recall = recall_score(all_labels, all_predictions, zero_division=0)           # true_positives / (true_positives + false_negatives)
+    f1 = f1_score(all_labels, all_predictions, zero_division=0)                   # 2 * (precision * recall) / (precision + recall)
     
     metrics = {"accuracy": accuracy,
                "precision": precision,
@@ -216,12 +218,11 @@ def client_fn(context: Context):
     trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-    # Crear el modelo de red neuroanl
+    # Crear el modelo de red neuronal
     input_size = X_train.shape[1]
-    hidden_size1 = 5
-    hidden_size2 = 5
+    hidden_sizes = [5, 5]
     output_size = 1
-    net = NeuralNetwork(input_size, hidden_size1, hidden_size2, output_size)
+    net = NeuralNetwork(input_size, hidden_sizes, output_size)
     
     return FlowerClient(net, trainloader, testloader).to_client()
 
