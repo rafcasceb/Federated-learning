@@ -32,15 +32,17 @@ def preprocess_data(data):
     if data.isnull().sum().sum() > 0:
         data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
 
-    print(data)
+    data = data.drop(columns=["study_id"])
     data_shuffled = shuffle(data)
+    
+    print(data)
     return data_shuffled
     
     
 
 def load_data():
-    excel_file_name = "PI-CAI_3_parte1.xlsx" 
-    temp_csv_file_name = "temp_database1.csv"
+    excel_file_name = "PI-CAI_3_parte2.xlsx" 
+    temp_csv_file_name = "temp_database2.csv"
     
     # Leer el archivo Excel y convertirlo a CSV por comodidad
     data_excel = pd.read_excel(excel_file_name)
@@ -50,8 +52,8 @@ def load_data():
     data = preprocess_data(data)
 
     # Separar los datos en entradas (X) y salida (y)
-    X = data.iloc[:, :-1].values  # Características de entrada (inputs / features)
-    y = data.iloc[:, -1].values   # Característica de salida (outputs / labels)
+    X = data.iloc[:, :-1].values  # Características de entrada (inputs/features);   todas las columnas menos la última
+    y = data.iloc[:, -1].values   # Característica de salida (outputs/labels);      última columna
     
     # Dividir los datos en conjuntos de entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -60,13 +62,13 @@ def load_data():
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-
+    
     # Convertir los datos a tensores de PyTorch
     X_train = torch.tensor(X_train, dtype=torch.float32)
     y_train = torch.tensor(y_train, dtype=torch.float32)
     X_test = torch.tensor(X_test, dtype=torch.float32)
     y_test = torch.tensor(y_test, dtype=torch.float32)
-
+    
     return X_train, y_train, X_test, y_test
 
 
@@ -123,17 +125,14 @@ def train(model, train_data, epochs=10):
 def test(model, test_data):
     model.eval()  # Modo de evaluación
     total_loss = 0.0
-    total_accuracy = 0.0
     total_samples = 0
     all_labels = []
     all_predictions = []
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
-            # Reemplazar NaN en las etiquetas por -1 (o cualquier valor que decidas)
-            labels = torch.nan_to_num(labels, nan=-1)
-            
-            # Reemplazar NaN en los inputs por 0  (si es necesario)
+            # Reemplazar NaN en labels e inputs
+            labels = torch.nan_to_num(labels, nan=-1)   # -1 o el que queramos
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
@@ -141,36 +140,30 @@ def test(model, test_data):
             loss = F.binary_cross_entropy_with_logits(outputs, labels)
             total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
             
-            # Convertir las predicciones a binario (0 o 1)
+            # Convertir las predicciones a binario (0 o 1) y preparar métricas
+            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation
             predictions = (outputs > 0.5).float()
-            batch_accuracy = accuracy_score(labels.numpy(), predictions.detach().numpy())
-            total_accuracy += batch_accuracy * labels.size(0)  
+            predictions = torch.nan_to_num(predictions, nan=0)
             total_samples += labels.size(0)
-            
             all_labels.extend(labels.numpy())
-            all_predictions.extend(predictions.numpy())
+            all_predictions.extend(predictions.detach().numpy())
     
     # Calcular métricas promedio
-    custom_loss = total_loss / total_samples
-    custom_accuracy = total_accuracy / total_samples
-    
+    loss = total_loss / total_samples
     accuracy = accuracy_score(all_labels, all_predictions)
     precision = precision_score(all_labels, all_predictions, zero_division=0)
     recall = recall_score(all_labels, all_predictions, zero_division=0)
     f1 = f1_score(all_labels, all_predictions, zero_division=0)
     
-    metrics = {"custom_accuracy": custom_accuracy,
-               "accuracy": accuracy,
+    metrics = {"accuracy": accuracy,
                "precision": precision,
                "recall": recall,
                "f1_score": f1}
-    
-    print(f'Loss on test set: {custom_loss:.4f}, Accuracy on test set: {custom_accuracy*100:.2f}%')
-    
-    print(f'Loss: {custom_loss:.4f}, Custom Accuracy: {custom_accuracy:.2f}, Accuracy: {accuracy:.2f}, '
+        
+    print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.2f}, '
           f'Precision: {precision:.2f}, Recall: {recall:.2f}, F1 Score: {f1:.2f}')
     
-    return custom_loss, metrics 
+    return loss, metrics 
 
 
 
@@ -210,7 +203,7 @@ def client_fn(context: Context):
     Create and return an instance of Flower `Client`.
     No need to pass a context since this code is only for one client.
     """
-    
+        
     # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
     X_train, y_train, X_test, y_test = load_data()
 

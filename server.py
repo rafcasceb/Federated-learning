@@ -7,7 +7,6 @@ from flwr.server.strategy import FedAvg
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    custom_accuracies = [num_examples * m["custom_accuracy"] for num_examples, m in metrics]
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
     precisions = [num_examples * m["precision"] for num_examples, m in metrics]
     recalls = [num_examples * m["recall"] for num_examples, m in metrics]
@@ -17,7 +16,6 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     total_num_examples = sum(num_examples_list)
 
     metrics = {
-        "custom_accuracy": sum(custom_accuracies) / total_num_examples,
         "accuracy": sum(accuracies) / total_num_examples,
         "precision": sum(precisions) / total_num_examples,
         "recall": sum(recalls) / total_num_examples,
@@ -31,8 +29,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # Define strategy with updated parameters
 strategy = FedAvg(
     evaluate_metrics_aggregation_fn=weighted_average,
-    min_fit_clients=1, # 1 client minimum     
-    min_available_clients=2  # cambiar cuando solo quiera probar con un único cliente, cambiar 2
+    min_fit_clients=2,       # minimum of clients in a round   
+    min_available_clients=4  # minimum of clients to stablish connection (cambiar para testear)
 )
 
 # Define config
