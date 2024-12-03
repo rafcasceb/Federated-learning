@@ -234,8 +234,10 @@ def client_fn(context: Context):
 
 if __name__ == "__main__":
     print()
-    server_ip = input("SERVER IP: ")
-    server_port = input("SERVER PORT: ")
+    #server_ip = input("SERVER IP: ")
+    #server_port = input("SERVER PORT: ")
+    server_ip = "10.100.14.139"
+    server_port = "8081"
     server_address = f"{server_ip}:{server_port}"    
     print()
     
