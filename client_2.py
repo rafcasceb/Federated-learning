@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 BATCH_SIZE = 16
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.002
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
 
