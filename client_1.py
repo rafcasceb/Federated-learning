@@ -16,8 +16,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 BATCH_SIZE = 16
-LEARNING_RATE = 0.001
-HIDDEN_SIZES = [5, 5]
+LEARNING_RATE = 0.002
+HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
 
 
@@ -89,7 +89,7 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_sizes[0])       # Fully connected layer 1
         self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])  # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3
+        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3 (output)
         self.relu = nn.ReLU()                                   # Activation function
 
     def forward(self, x):
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     print()
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
-    server_ip = "10.100.14.139"
+    server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"    
     print()

@@ -25,7 +25,10 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "f1_score": sum(f1_scores) / total_num_examples,
     }
     
-    print(sum(accuracies) / total_num_examples, sum(precisions) / total_num_examples, sum(recalls) / total_num_examples, sum(f1_scores) / total_num_examples)
+    print(sum(accuracies) / total_num_examples,
+          sum(precisions) / total_num_examples,
+          sum(recalls) / total_num_examples,
+          sum(f1_scores) / total_num_examples)
     
     return metrics
 
@@ -45,7 +48,7 @@ def configure_server():
 
     # Define config
     config = ServerConfig(
-        num_rounds=30,
+        num_rounds = 20,  ## num_rounds=30,
         round_timeout=600
     )
 
@@ -67,7 +70,7 @@ if __name__ == "__main__":
     
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
-    server_ip = "10.100.14.139"
+    server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     

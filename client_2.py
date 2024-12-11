@@ -15,6 +15,12 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 
+BATCH_SIZE = 16
+LEARNING_RATE = 0.001
+HIDDEN_SIZES = [128, 128]
+BINARIZATION_THRESHOLD = 0.4
+
+
 # -------------------------
 # 1. Data Preparation
 # -------------------------
@@ -83,7 +89,7 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_sizes[0])       # Fully connected layer 1
         self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])  # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3
+        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3 (output)
         self.relu = nn.ReLU()                                   # Activation function
 
     def forward(self, x):
@@ -101,7 +107,7 @@ class NeuralNetwork(nn.Module):
 # -------------------------
 
 def train(model, train_data, epochs=10):
-    learning_rate = 0.001
+    learning_rate = LEARNING_RATE ##learning_rate = 0.001
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
@@ -124,7 +130,7 @@ def train(model, train_data, epochs=10):
 
 def test(model, test_data):
     model.eval()  # Modo de evaluación
-    binarization_threshold = 0.4
+    binarization_threshold = BINARIZATION_THRESHOLD  ## binarization_threshold = 0.4
     total_loss = 0.0
     total_samples = 0
     all_labels = []
@@ -138,9 +144,9 @@ def test(model, test_data):
             
             # Realizar la predicción
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation
-            ## print("Raw outputs:", outputs)
+            print("Raw outputs:", outputs)
             predictions = (outputs > binarization_threshold).float()  # Predecir en binario
-            ## print("Binary outputs (predictions):", predictions)
+            print("Binary outputs (predictions):", predictions)
             predictions = torch.nan_to_num(predictions, nan=0)
             
             # Colecionar labels y predicciones
@@ -214,13 +220,13 @@ def client_fn(context: Context):
     test_dataset = TensorDataset(X_test, y_test)
     
     # Crear un DataLoader
-    batch_size = 16
+    batch_size = BATCH_SIZE  ##batch_size = 16
     trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     # Crear el modelo de red neuronal
     input_size = X_train.shape[1]
-    hidden_sizes = [5, 5]
+    hidden_sizes = HIDDEN_SIZES  ##hidden_sizes = [5, 5]
     output_size = 1
     net = NeuralNetwork(input_size, hidden_sizes, output_size)
     
@@ -236,7 +242,7 @@ if __name__ == "__main__":
     print()
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
-    server_ip = "10.100.14.139"
+    server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"    
     print()
