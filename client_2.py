@@ -107,7 +107,7 @@ class NeuralNetwork(nn.Module):
 # -------------------------
 
 def train(model, train_data, epochs=10):
-    learning_rate = LEARNING_RATE ##learning_rate = 0.001
+    learning_rate = LEARNING_RATE
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
@@ -130,7 +130,7 @@ def train(model, train_data, epochs=10):
 
 def test(model, test_data):
     model.eval()  # Modo de evaluación
-    binarization_threshold = BINARIZATION_THRESHOLD  ## binarization_threshold = 0.4
+    binarization_threshold = BINARIZATION_THRESHOLD
     total_loss = 0.0
     total_samples = 0
     all_labels = []
@@ -220,13 +220,13 @@ def client_fn(context: Context):
     test_dataset = TensorDataset(X_test, y_test)
     
     # Crear un DataLoader
-    batch_size = BATCH_SIZE  ##batch_size = 16
+    batch_size = BATCH_SIZE
     trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     # Crear el modelo de red neuronal
     input_size = X_train.shape[1]
-    hidden_sizes = HIDDEN_SIZES  ##hidden_sizes = [5, 5]
+    hidden_sizes = HIDDEN_SIZES
     output_size = 1
     net = NeuralNetwork(input_size, hidden_sizes, output_size)
     
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     print()
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
-    server_ip = "192.168.18.12"
+    server_ip = "192.168.1.98"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"    
     print()

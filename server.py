@@ -70,7 +70,7 @@ if __name__ == "__main__":
     
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
-    server_ip = "192.168.18.12"
+    server_ip = "192.168.1.98"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
