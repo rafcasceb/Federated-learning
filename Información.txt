@@ -1,0 +1,87 @@
+---
+IPs
+---
+Para encontrar ip pública Ubuntu: $  curl ifconfig.me
+Para encontrar ip privada Ubuntu: $  hostname -I
+
+Para encontrar ip pública Windows: $  curl ifconfig.me
+Para encontrar ip privada Windows: $  ipconfig
+
+192.168.18.12
+
+
+
+-------
+pipreqs
+-------
+
+pipreqs is a library that automatically creates all imports needed based on the files imports.
+
+I think it works recursively even if those dependencies are not explicitly stated in the imports.
+
+To make it work:
+    pipreqs /relative/path/to/folder
+If it's the current one:
+    pipreqs
+If requirements.txt already exists and you want to overwrite it:
+    pipreqs --force
+Installing without versions:
+    pipreqs --mode no-pin
+
+En /rdlab:
+    python -m pipreqs.pipreqs
+
+Para instalar requirements.txt:
+    pip install -r requirements.txt
+
+
+Here full description of pipreqs (not very long):
+https://pypi.org/project/pipreqs/
+
+
+
+-------
+pip installs
+-------
+
+To install a package with pip:
+    pip install <PACKAGE>      // e.g.: numpy, tensorflow, flwr, pandas, scipy o scikit-learn
+
+To install many packages with pip:
+    pip install <PACKAGE1> <PACKAGE2> <PACKAGE3> <...>
+
+To uninstall a package with pip:
+    pip uninstall <PACKAGE>
+
+To install a concrete version of a package with pip:
+    pip install <PACKAGE>==<VERSION>
+For example:
+    pip install numpy==1.23.4
+
+To check if there are pending conflicts between packages dependencies (e.g., there are incompatibilities with the versions)
+    pip check
+
+To list packages:
+    pip list
+
+To show if a package is installed:
+    pip show <PACKAGE>
+
+
+
+
+
+---------
+ANTICUADO
+---------
+Usar Python 3.10.
+
+Para ejecutar: python server.py 8080
+
+MNIST dataset:
+ - Sample space: imágenes
+ - Feature space: intensidad de cada píxel de una imagen (el rango de valores para cada feature es [0,225])
+ - Lable space: hay 10 clasificaciones posibles en función de las features. Están representadas por números [0,9].
+
+
+No es necesario abrir nuevos puertos para los clientes en este caso, ya que se están conectando al mismo servidor. La única necesidad de diferentes puertos sería si estuvieses ejecutando múltiples servidores de Flower en la misma máquina, lo cual no es el caso aquí.
