@@ -139,18 +139,18 @@ def test(model, test_data):
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
             # Reemplazar NaN en labels e inputs
-            labels = torch.nan_to_num(labels, nan=-1)   # -1 o el que queramos
+            labels = torch.nan_to_num(labels, nan=-1)  # -1 o el que queramos
             inputs = torch.nan_to_num(inputs, nan=0)
             
             # Realizar la predicción
-            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation
+            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
             print("Raw outputs:", outputs)
             predictions = (outputs > binarization_threshold).float()  # Predecir en binario
             print("Binary outputs (predictions):", predictions)
             predictions = torch.nan_to_num(predictions, nan=0)
             
             # Colecionar labels y predicciones
-            loss = F.binary_cross_entropy_with_logits(outputs, labels)
+            loss = F.binary_cross_entropy(outputs, labels)
             total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
             total_samples += labels.size(0)
             all_labels.extend(labels.numpy())
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     print()
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
-    server_ip = "192.168.1.98"
+    server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"    
     print()

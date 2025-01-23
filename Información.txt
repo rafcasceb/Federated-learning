@@ -7,7 +7,6 @@ Para encontrar ip privada Ubuntu: $  hostname -I
 Para encontrar ip pública Windows: $  curl ifconfig.me
 Para encontrar ip privada Windows: $  ipconfig
 
-192.168.18.12
 
 
 
