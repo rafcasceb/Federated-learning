@@ -1,5 +1,7 @@
 from collections import OrderedDict
+from typing import Any, Dict, Tuple
 
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -25,7 +27,7 @@ BINARIZATION_THRESHOLD = 0.4
 # 1. Data Preparation
 # -------------------------
 
-def preprocess_data(data):
+def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     for col in data.columns:
         data[col] = data[col].astype(str).str.replace(',', '.')
     
@@ -46,7 +48,7 @@ def preprocess_data(data):
     
     
 
-def load_data():
+def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     excel_file_name = "PI-CAI_3__part1.xlsx" 
     temp_csv_file_name = "temp_database_1.csv"
     
@@ -85,14 +87,14 @@ def load_data():
 
 class NeuralNetwork(nn.Module):
 
-    def __init__(self, input_size, hidden_sizes, output_size):
+    def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int) -> None:
         super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_sizes[0])       # Fully connected layer 1
         self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])  # Fully connected layer 2
         self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3 (output)
         self.relu = nn.ReLU()                                   # Activation function
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.fc1(x)
         out = self.relu(out)
         out = self.fc2(out)
@@ -106,7 +108,7 @@ class NeuralNetwork(nn.Module):
 # 3. Training and Evaluation
 # -------------------------
 
-def train(model, train_data, epochs=10):
+def train(model: nn.Module, train_data: DataLoader, epochs: int =10) -> None:
     learning_rate = LEARNING_RATE
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -128,7 +130,7 @@ def train(model, train_data, epochs=10):
 
 
 
-def test(model, test_data):
+def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
     model.eval()  # Evaluation model
     binarization_threshold = BINARIZATION_THRESHOLD
     total_loss = 0.0
@@ -181,32 +183,32 @@ def test(model, test_data):
 
 class FlowerClient(NumPyClient):
     
-    def __init__(self, net, trainloader, testloader):
+    def __init__(self, net: nn.Module, trainloader: DataLoader, testloader: DataLoader) -> None:
         self.net = net
         self.trainloader = trainloader
         self.testloader = testloader
     
-    def get_parameters(self, config):
+    def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
-    def set_parameters(self, parameters):
+    def set_parameters(self, parameters: list[np.ndarray]) -> None:
         params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.net.load_state_dict(state_dict)
 
-    def fit(self, parameters, config):
+    def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
         self.set_parameters(parameters)
         train(self.net, self.trainloader, epochs=1)
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
-    def evaluate(self, parameters, config):
+    def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
         self.set_parameters(parameters)
         loss, metrics = test(self.net, self.testloader)
         num_examples = len(self.testloader.dataset)
         return loss, num_examples, metrics
 
 
-def client_fn(context: Context):
+def client_fn(context: Context) -> FlowerClient:
     """
     Create and return an instance of Flower `Client`.
     No need to pass a context since this code is only for one client.

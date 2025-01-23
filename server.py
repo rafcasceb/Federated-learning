@@ -38,21 +38,21 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # -------------------------
 # 2. Configure server
 # -------------------------
-def configure_server():
+def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
     # Define strategy with updated parameters
     strategy = FedAvg(
         evaluate_metrics_aggregation_fn=weighted_average,
         min_fit_clients=2,       # minimum of clients in a round   
-        min_available_clients=2  # minimum of clients to stablish connection (cambiar para testear)
+        min_available_clients=2  # minimum of clients to stablish connection (modify for testing)
     )
 
     # Define config
     config = ServerConfig(
-        num_rounds = 20,  ## num_rounds=30,
+        num_rounds = 20,
         round_timeout=600
     )
 
-    # Flower ServerApp (no lo estamos usando)
+    # Flower ServerApp (we are not using it yet)
     app = ServerApp(
         config=config,
         strategy=strategy,
