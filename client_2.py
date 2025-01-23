@@ -47,29 +47,29 @@ def preprocess_data(data):
     
 
 def load_data():
-    excel_file_name = "PI-CAI_3_parte2.xlsx" 
-    temp_csv_file_name = "temp_database2.csv"
+    excel_file_name = "PI-CAI_3__part2.xlsx" 
+    temp_csv_file_name = "temp_database_2.csv"
     
-    # Leer el archivo Excel y convertirlo a CSV por comodidad
+    # Read Excel file and convert it into CSV for confort
     data_excel = pd.read_excel(excel_file_name)
     data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
     data = pd.read_csv(temp_csv_file_name, sep=";")    
     
     data = preprocess_data(data)
 
-    # Separar los datos en entradas (X) y salida (y)
-    X = data.iloc[:, :-1].values  # Características de entrada (inputs/features);   todas las columnas menos la última
-    y = data.iloc[:, -1].values   # Característica de salida (outputs/labels);      última columna
+    # Separata data into inputs (X) and outputs (y)
+    X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
+    y = data.iloc[:, -1].values   # Output characteristics (labels);     last column
     
-    # Dividir los datos en conjuntos de entrenamiento y prueba
+    # Divide data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Estandarizar las características de entrada
+    # Standardize input characteristics
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     
-    # Convertir los datos a tensores de PyTorch
+    # Convert data into PyTorch tensors
     X_train = torch.tensor(X_train, dtype=torch.float32)
     y_train = torch.tensor(y_train, dtype=torch.float32)
     X_test = torch.tensor(X_test, dtype=torch.float32)
@@ -122,14 +122,14 @@ def train(model, train_data, epochs=10):
             loss.backward()
             optimizer.step()
             
-            total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
+            total_loss += loss.item() * inputs.size(0)  # Multiply single loss times batch size
             
-        epoch_loss = total_loss / len(train_data.dataset)  # Calcular la pérdida promedio por muestra
+        epoch_loss = total_loss / len(train_data.dataset)  # Calculate average loss per sample
 
 
 
 def test(model, test_data):
-    model.eval()  # Modo de evaluación
+    model.eval()  # Evaluation model
     binarization_threshold = BINARIZATION_THRESHOLD
     total_loss = 0.0
     total_samples = 0
@@ -138,25 +138,25 @@ def test(model, test_data):
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
-            # Reemplazar NaN en labels e inputs
-            labels = torch.nan_to_num(labels, nan=-1)  # -1 o el que queramos
+            # Replace NaN from labels and inputs
+            labels = torch.nan_to_num(labels, nan=-1)  # -1 or whichever we desire
             inputs = torch.nan_to_num(inputs, nan=0)
             
-            # Realizar la predicción
+            # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
             print("Raw outputs:", outputs)
-            predictions = (outputs > binarization_threshold).float()  # Predecir en binario
+            predictions = (outputs > binarization_threshold).float()  # Binarize predictions
             print("Binary outputs (predictions):", predictions)
             predictions = torch.nan_to_num(predictions, nan=0)
             
-            # Colecionar labels y predicciones
+            # Collect labels and predictions
             loss = F.binary_cross_entropy(outputs, labels)
-            total_loss += loss.item() * inputs.size(0)  # Multiplicar la pérdida por el tamaño del lote
+            total_loss += loss.item() * inputs.size(0)
             total_samples += labels.size(0)
             all_labels.extend(labels.numpy())
             all_predictions.extend(predictions.detach().numpy())
     
-    # Calcular métricas promedio
+    # Calculate average metrics
     loss = total_loss / total_samples
     accuracy = accuracy_score(all_labels, all_predictions)
     precision = precision_score(all_labels, all_predictions, zero_division=0)     # true_positives / (true_positives + false_positives)
@@ -212,19 +212,19 @@ def client_fn(context: Context):
     No need to pass a context since this code is only for one client.
     """
         
-    # Suponiendo que tienes X_train, y_train, X_test, y_test como tensores
+    # Supposing X_train, y_train, X_test, y_test are tensors
     X_train, y_train, X_test, y_test = load_data()
 
-    # Crear un TensorDataset
+    # Create a TensorDataset
     train_dataset = TensorDataset(X_train, y_train)
     test_dataset = TensorDataset(X_test, y_test)
     
-    # Crear un DataLoader
+    # Create a DataLodaer
     batch_size = BATCH_SIZE
     trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-    # Crear el modelo de red neuronal
+    # Create the neural network model
     input_size = X_train.shape[1]
     hidden_sizes = HIDDEN_SIZES
     output_size = 1
