@@ -42,8 +42,8 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
     # Define strategy with updated parameters
     strategy = FedAvg(
         evaluate_metrics_aggregation_fn=weighted_average,
-        min_fit_clients=2,       # minimum of clients in a round   
-        min_available_clients=2  # minimum of clients to stablish connection (modify for testing)
+        min_fit_clients=4,       # minimum of clients in a round   
+        min_available_clients=4  # minimum of clients to stablish connection (modify for testing)
     )
 
     # Define config
