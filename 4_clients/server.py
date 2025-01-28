@@ -62,19 +62,19 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 
 
 
+
 # -------------------------
 # 3. Main Execution (legacy mode)
 # -------------------------
 
 if __name__ == "__main__":
-    
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
-    strategy, config, app = configure_server()
+    strategy, config, app = configure_server()  # We are not using the server app so far
 
     start_server(
         server_address=server_address,

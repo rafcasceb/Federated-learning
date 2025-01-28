@@ -23,6 +23,7 @@ HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
 
 
+
 # -------------------------
 # 1. Data Preparation
 # -------------------------
@@ -48,10 +49,7 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     
     
 
-def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    excel_file_name = "PI-CAI_3__part1.xlsx" 
-    temp_csv_file_name = "temp_database_1.csv"
-    
+def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     # Read Excel file and convert it into CSV for confort
     data_excel = pd.read_excel(excel_file_name)
     data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
@@ -81,6 +79,7 @@ def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 
 
 
+
 # -------------------------
 # 2. Neural Network Model Definition
 # -------------------------
@@ -101,6 +100,7 @@ class NeuralNetwork(nn.Module):
         out = self.relu(out)
         out = self.fc3(out)
         return out
+
 
 
 
@@ -177,6 +177,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
 
 
 
+
 # -------------------------
 # 4. Federated Learning Client
 # -------------------------
@@ -208,14 +209,14 @@ class FlowerClient(NumPyClient):
         return loss, num_examples, metrics
 
 
-def client_fn(context: Context) -> FlowerClient:
+def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
     """
-    Create and return an instance of Flower `Client`.
-    No need to pass a context since this code is only for one client.
+    It creates an instance of FlowerClient with the configuration given. 
+    No need to pass a context for the moment.
     """
-        
+
     # Supposing X_train, y_train, X_test, y_test are tensors
-    X_train, y_train, X_test, y_test = load_data()
+    X_train, y_train, X_test, y_test = load_data(excel_file_name, temp_csv_file_name)
 
     # Create a TensorDataset
     train_dataset = TensorDataset(X_train, y_train)
@@ -236,20 +237,19 @@ def client_fn(context: Context) -> FlowerClient:
 
 
 
+
 # -------------------------
 # 5. Main Execution
 # -------------------------
 
-if __name__ == "__main__":
-    print()
+def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
     server_ip = "192.168.18.12"
     server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"    
-    print()
-    
+    server_address = f"{server_ip}:{server_port}"  
+
     start_client(
         server_address=server_address,
-        client=client_fn(None),
+        client=client_fn(excel_file_name, temp_csv_file_name, context),
     )
