@@ -21,6 +21,7 @@ BATCH_SIZE = 16
 LEARNING_RATE = 0.002
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
+NUM_EPOCHS = 16
 
 
 
@@ -108,10 +109,9 @@ class NeuralNetwork(nn.Module):
 # 3. Training and Evaluation
 # -------------------------
 
-def train(model: nn.Module, train_data: DataLoader, epochs: int =10) -> None:
-    learning_rate = LEARNING_RATE
+def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
     for epoch in range(epochs):
         model.train()
@@ -132,7 +132,6 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =10) -> None:
 
 def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
     model.eval()  # Evaluation model
-    binarization_threshold = BINARIZATION_THRESHOLD
     total_loss = 0.0
     total_samples = 0
     all_labels = []
@@ -147,7 +146,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
             # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
             print("Raw outputs:", outputs)
-            predictions = (outputs > binarization_threshold).float()  # Binarize predictions
+            predictions = (outputs > BINARIZATION_THRESHOLD).float()  # Binarize predictions
             print("Binary outputs (predictions):", predictions)
             predictions = torch.nan_to_num(predictions, nan=0)
             
@@ -199,7 +198,7 @@ class FlowerClient(NumPyClient):
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
         self.set_parameters(parameters)
-        train(self.net, self.trainloader, epochs=1)
+        train(self.net, self.trainloader, epochs=NUM_EPOCHS)
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
@@ -223,15 +222,13 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
     test_dataset = TensorDataset(X_test, y_test)
     
     # Create a DataLodaer
-    batch_size = BATCH_SIZE
-    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     # Create the neural network model
     input_size = X_train.shape[1]
-    hidden_sizes = HIDDEN_SIZES
     output_size = 1
-    net = NeuralNetwork(input_size, hidden_sizes, output_size)
+    net = NeuralNetwork(input_size, HIDDEN_SIZES, output_size)
     
     return FlowerClient(net, trainloader, testloader).to_client()
 
