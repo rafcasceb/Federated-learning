@@ -39,27 +39,20 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # 2. Configure server
 # -------------------------
 def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
-    # Define strategy with updated parameters
-    strategy = FedAvg(
-        evaluate_metrics_aggregation_fn=weighted_average,
-        min_fit_clients=1,       # minimum of clients in a round
-        min_evaluate_clients=1,   # minimum of clients for evaluation
-        min_available_clients=1  # minimum of clients to stablish connection (modify for testing)
-    )
-
-    # Define config
     config = ServerConfig(
         num_rounds = 20,
         round_timeout=600
     )
 
-    # Flower ServerApp (we are not using it yet)
-    app = ServerApp(
-        config=config,
-        strategy=strategy,
+    strategy = FedAvg(
+        evaluate_metrics_aggregation_fn=weighted_average,
+        min_fit_clients=1,       # minimum of clients in a round
+        min_evaluate_clients=1,  # minimum of clients for evaluation
+        min_available_clients=1  # minimum of clients to stablish connection (modify for testing)
     )
     
-    return strategy, config, app
+    return config, strategy
+
 
 
 
@@ -68,13 +61,15 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 # -------------------------
 
 if __name__ == "__main__":
+    # Function start_server is deprecated but it is the only current way to use a custom server_ip
+    
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
-    strategy, config, app = configure_server()
+    config, strategy = configure_server()
 
     start_server(
         server_address=server_address,

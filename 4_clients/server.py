@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from flwr.common import Metrics, Context
-from flwr.server import ServerApp, ServerAppComponents, ServerConfig, start_server
+from flwr.common import Metrics
+from flwr.server import ServerApp, ServerConfig, start_server
 from flwr.server.strategy import FedAvg
 
 
@@ -46,7 +46,8 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 
     strategy = FedAvg(
         evaluate_metrics_aggregation_fn=weighted_average,
-        min_fit_clients=4,       # minimum of clients in a round   
+        min_fit_clients=4,       # minimum of clients in a round
+        min_evaluate_clients=4,  # minimum of clients for evaluation
         min_available_clients=4  # minimum of clients to stablish connection (modify for testing)
     )
     

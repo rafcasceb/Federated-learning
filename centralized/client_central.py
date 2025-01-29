@@ -7,8 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from flwr.client import ClientApp, NumPyClient, start_client
-from flwr.common import Context
+from flwr.client import NumPyClient
 from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -18,11 +17,10 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 BATCH_SIZE = 16
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.002
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
-NUM_EPOCHS = 8
-
+NUM_EPOCHS = 16
 
 
 # -------------------------
@@ -50,7 +48,10 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     
     
 
-def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    excel_file_name = "PI-CAI_3.xlsx"
+    temp_csv_file_name = "temp_database.csv"
+    
     # Read Excel file and convert it into CSV for confort
     data_excel = pd.read_excel(excel_file_name)
     data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
@@ -58,7 +59,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     
     data = preprocess_data(data)
 
-    # Separata data into inputs (X) and outputs (y)
+    # Separate data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
     y = data.iloc[:, -1].values   # Output characteristics (labels);     last column
     
@@ -77,7 +78,6 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     y_test = torch.tensor(y_test, dtype=torch.float32)
     
     return X_train, y_train, X_test, y_test
-
 
 
 
@@ -104,14 +104,14 @@ class NeuralNetwork(nn.Module):
 
 
 
-
 # -------------------------
 # 3. Training and Evaluation
 # -------------------------
 
-def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
+def train(model: nn.Module, train_data: DataLoader, epochs: int =10) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    # optimizer = optim.RMSprop(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)  # Add L2 regularization
     
     for epoch in range(epochs):
         model.train()
@@ -176,46 +176,14 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
 
 
 
-
-# -------------------------
-# 4. Federated Learning Client
-# -------------------------
-
-class FlowerClient(NumPyClient):
+def train_model():
+    X_train, y_train, X_test, y_test = load_data()
     
-    def __init__(self, net: nn.Module, trainloader: DataLoader, testloader: DataLoader) -> None:
-        self.net = net
-        self.trainloader = trainloader
-        self.testloader = testloader
-    
-    def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
-        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
-
-    def set_parameters(self, parameters: list[np.ndarray]) -> None:
-        params_dict = zip(self.net.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        self.net.load_state_dict(state_dict)
-
-    def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
-        self.set_parameters(parameters)
-        train(self.net, self.trainloader, epochs=NUM_EPOCHS)
-        return self.get_parameters(config={}), len(self.trainloader.dataset), {}
-
-    def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
-        self.set_parameters(parameters)
-        loss, metrics = test(self.net, self.testloader)
-        num_examples = len(self.testloader.dataset)
-        return loss, num_examples, metrics
-
-
-def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
-    """
-    It creates an instance of FlowerClient with the configuration given. 
-    No need to pass a context for the moment.
-    """
-
-    # Supposing X_train, y_train, X_test, y_test are tensors
-    X_train, y_train, X_test, y_test = load_data(excel_file_name, temp_csv_file_name)
+    # Create the neural network model
+    input_size = X_train.shape[1]
+    hidden_sizes = HIDDEN_SIZES
+    output_size = 1
+    net = NeuralNetwork(input_size, hidden_sizes, output_size)
 
     # Create a TensorDataset
     train_dataset = TensorDataset(X_train, y_train)
@@ -224,29 +192,18 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
     # Create a DataLodaer
     trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-    # Create the neural network model
-    input_size = X_train.shape[1]
-    output_size = 1
-    net = NeuralNetwork(input_size, HIDDEN_SIZES, output_size)
     
-    return FlowerClient(net, trainloader, testloader).to_client()
-
+    train(net, trainloader, NUM_EPOCHS)
+    loss, metrics = test(net, testloader)
+    
+    return net
 
 
 
 # -------------------------
-# 5. Main Execution (legacy mode)
+# 5. Main Execution
 # -------------------------
 
-def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):
-    #server_ip = input("SERVER IP: ")
-    #server_port = input("SERVER PORT: ")
-    server_ip = "192.168.18.12"
-    server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"  
-
-    start_client(
-        server_address=server_address,
-        client=client_fn(excel_file_name, temp_csv_file_name, context),
-    )
+if __name__ == "__main__":
+    print(); print("STARTING TRAINING"); print()
+    train_model()

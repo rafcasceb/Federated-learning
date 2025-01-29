@@ -24,6 +24,7 @@ BINARIZATION_THRESHOLD = 0.4
 NUM_EPOCHS = 16
 
 
+
 # -------------------------
 # 1. Data Preparation
 # -------------------------
@@ -49,10 +50,7 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     
     
 
-def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    excel_file_name = "PI-CAI_3.xlsx"
-    temp_csv_file_name = "temp_database.csv"
-    
+def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     # Read Excel file and convert it into CSV for confort
     data_excel = pd.read_excel(excel_file_name)
     data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
@@ -60,7 +58,7 @@ def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
     
     data = preprocess_data(data)
 
-    # Separate data into inputs (X) and outputs (y)
+    # Separata data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
     y = data.iloc[:, -1].values   # Output characteristics (labels);     last column
     
@@ -79,6 +77,7 @@ def load_data() -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
     y_test = torch.tensor(y_test, dtype=torch.float32)
     
     return X_train, y_train, X_test, y_test
+
 
 
 
@@ -105,14 +104,14 @@ class NeuralNetwork(nn.Module):
 
 
 
+
 # -------------------------
 # 3. Training and Evaluation
 # -------------------------
 
-def train(model: nn.Module, train_data: DataLoader, epochs: int =10) -> None:
+def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    # optimizer = optim.RMSprop(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)  # Add L2 regularization
     
     for epoch in range(epochs):
         model.train()
@@ -177,6 +176,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
 
 
 
+
 # -------------------------
 # 4. Federated Learning Client
 # -------------------------
@@ -198,7 +198,7 @@ class FlowerClient(NumPyClient):
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
         self.set_parameters(parameters)
-        train(self.net, self.trainloader, NUM_EPOCHS)
+        train(self.net, self.trainloader, epochs=NUM_EPOCHS)
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
@@ -208,14 +208,14 @@ class FlowerClient(NumPyClient):
         return loss, num_examples, metrics
 
 
-def train_model():
-    X_train, y_train, X_test, y_test = load_data()
-    
-    # Create the neural network model
-    input_size = X_train.shape[1]
-    hidden_sizes = HIDDEN_SIZES
-    output_size = 1
-    net = NeuralNetwork(input_size, hidden_sizes, output_size)
+def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
+    """
+    It creates an instance of FlowerClient with the configuration given. 
+    No need to pass a context for the moment.
+    """
+
+    # Supposing X_train, y_train, X_test, y_test are tensors
+    X_train, y_train, X_test, y_test = load_data(excel_file_name, temp_csv_file_name)
 
     # Create a TensorDataset
     train_dataset = TensorDataset(X_train, y_train)
@@ -224,18 +224,29 @@ def train_model():
     # Create a DataLodaer
     trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    # Create the neural network model
+    input_size = X_train.shape[1]
+    output_size = 1
+    net = NeuralNetwork(input_size, HIDDEN_SIZES, output_size)
     
-    train(net, trainloader, NUM_EPOCHS)
-    loss, metrics = test(net, testloader)
-    
-    return net
+    return FlowerClient(net, trainloader, testloader).to_client()
+
 
 
 
 # -------------------------
-# 5. Main Execution
+# 5. Main Execution (legacy mode)
 # -------------------------
 
-if __name__ == "__main__":
-    print(); print("STARTING TRAINING"); print()
-    train_model()
+def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):
+    #server_ip = input("SERVER IP: ")
+    #server_port = input("SERVER PORT: ")
+    server_ip = "192.168.18.12"
+    server_port = "8081"
+    server_address = f"{server_ip}:{server_port}"  
+
+    start_client(
+        server_address=server_address,
+        client=client_fn(excel_file_name, temp_csv_file_name, context),
+    )
