@@ -236,7 +236,7 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
 
 
 # -------------------------
-# 5. Main Execution
+# 5. Main Execution (legacy mode)
 # -------------------------
 
 def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):

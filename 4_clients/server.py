@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from flwr.common import Metrics
-from flwr.server import ServerApp, ServerConfig, start_server
+from flwr.common import Metrics, Context
+from flwr.server import ServerApp, ServerAppComponents, ServerConfig, start_server
 from flwr.server.strategy import FedAvg
 
 
@@ -39,26 +39,18 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # 2. Configure server
 # -------------------------
 def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
-    # Define strategy with updated parameters
-    strategy = FedAvg(
-        evaluate_metrics_aggregation_fn=weighted_average,
-        min_fit_clients=4,       # minimum of clients in a round   
-        min_available_clients=4  # minimum of clients to stablish connection (modify for testing)
-    )
-
-    # Define config
     config = ServerConfig(
         num_rounds = 20,
         round_timeout=600
     )
 
-    # Flower ServerApp (we are not using it yet)
-    app = ServerApp(
-        config=config,
-        strategy=strategy,
+    strategy = FedAvg(
+        evaluate_metrics_aggregation_fn=weighted_average,
+        min_fit_clients=4,       # minimum of clients in a round   
+        min_available_clients=4  # minimum of clients to stablish connection (modify for testing)
     )
     
-    return strategy, config, app
+    return config, strategy
 
 
 
@@ -68,13 +60,15 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 # -------------------------
 
 if __name__ == "__main__":
+    # Function start_server is deprecated but it is the only current way to use a custom server_ip
+    
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
-    strategy, config, app = configure_server()  # We are not using the server app so far
+    config, strategy = configure_server()
 
     start_server(
         server_address=server_address,
