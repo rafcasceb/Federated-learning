@@ -3,7 +3,10 @@ from typing import List, Tuple
 from flwr.common import Metrics
 from flwr.server import ServerApp, ServerConfig, start_server
 from flwr.server.strategy import FedAvg
+from task import create_logger
 
+
+METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
 # -------------------------
 # 1. Obtain metrics
@@ -18,25 +21,37 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     num_examples_list = [num_examples for num_examples, _ in metrics]
     total_num_examples = sum(num_examples_list)
 
-    metrics = {
+    aggregated_metrics = {
         "accuracy": sum(accuracies) / total_num_examples,
         "precision": sum(precisions) / total_num_examples,
         "recall": sum(recalls) / total_num_examples,
         "f1_score": sum(f1_scores) / total_num_examples,
     }
+        
+    logger_server.info("Round metrics -"
+            f"Accuracy: {aggregated_metrics['accuracy']:.2f}, "
+            f"Precision: {aggregated_metrics['precision']:.2f}, "
+            f"Recall: {aggregated_metrics['recall']:.2f}, "
+            f"F1 Score: {aggregated_metrics['f1_score']:.2f}")
     
-    print(sum(accuracies) / total_num_examples,
-          sum(precisions) / total_num_examples,
-          sum(recalls) / total_num_examples,
-          sum(f1_scores) / total_num_examples)
-    
-    return metrics
+    return aggregated_metrics
 
 
 
 
 # -------------------------
-# 2. Configure server
+# 2. Log round
+# -------------------------
+def on_fit_config_fn(server_round: int):
+    '''Log the round number'''
+    logger_server.info(f"[ROUND {server_round}]")
+    return {}
+
+
+
+
+# -------------------------
+# 3. Configure server
 # -------------------------
 def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
     config = ServerConfig(
@@ -46,10 +61,11 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 
     strategy = FedAvg(
         evaluate_metrics_aggregation_fn=weighted_average,
-        min_fit_clients=4,       # minimum of clients in a round
-        min_evaluate_clients=4,  # minimum of clients for evaluation
-        min_available_clients=4  # minimum of clients to stablish connection (modify for testing)
-    )
+        on_fit_config_fn=on_fit_config_fn,
+        min_fit_clients=2,       # minimum of clients in a round
+        min_evaluate_clients=2,  # minimum of clients for evaluation
+        min_available_clients=2  # minimum of clients to stablish connection (modify for testing)
+    )   
     
     return config, strategy
 
@@ -57,11 +73,15 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 
 
 # -------------------------
-# 3. Main Execution (legacy mode)
+# 4. Main Execution (legacy mode)
 # -------------------------
 
 if __name__ == "__main__":
     # Function start_server is deprecated but it is the only current way to use a custom server_ip
+    
+    logger_server = create_logger("server.log")
+    
+    logger_server.info("Starting FL server...")
     
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
@@ -70,9 +90,13 @@ if __name__ == "__main__":
     server_address = f"{server_ip}:{server_port}"
     
     config, strategy = configure_server()
+    
+    logger_server.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
         server_address=server_address,
         config=config,
         strategy=strategy,
     )
+
+    logger_server.info("Closing FL server...")

@@ -15,6 +15,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from torch.utils.data import DataLoader, TensorDataset
 
+from task import create_logger, logger
+
 
 
 BATCH_SIZE = 16
@@ -22,6 +24,7 @@ LEARNING_RATE = 0.001
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
 NUM_EPOCHS = 8
+#logger = None
 
 
 
@@ -51,12 +54,16 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     
 
 def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    logger.info("Loading data from %s", excel_file_name)
+    
     # Read Excel file and convert it into CSV for confort
     data_excel = pd.read_excel(excel_file_name)
     data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
     data = pd.read_csv(temp_csv_file_name, sep=";")    
+    logger.info("Data loaded. Shape: %s", data.shape)
     
     data = preprocess_data(data)
+    logger.info("Data preprocessing completed. Final shape: %s", data.shape)
 
     # Separata data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
@@ -113,6 +120,8 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
+    logger.info("Starting training for %d epochs...", epochs)
+    
     for epoch in range(epochs):
         model.train()
         total_loss = 0.0
@@ -127,6 +136,9 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
             total_loss += loss.item() * inputs.size(0)  # Multiply single loss times batch size
             
         epoch_loss = total_loss / len(train_data.dataset)  # Calculate average loss per sample
+        logger.info(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.4f}")
+    
+    logger.info("Training completed.")
 
 
 
@@ -168,9 +180,8 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
                "precision": precision,
                "recall": recall,
                "f1_score": f1}
-        
-    print(f'Loss: {loss:.4f}, Accuracy: {accuracy:.2f}, '
-          f'Precision: {precision:.2f}, Recall: {recall:.2f}, F1 Score: {f1:.2f}')
+           
+    logger.info(f"Evaluation - Loss: {loss:.4f}, Accuracy: {accuracy:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}, F1: {f1:.2f}")
     
     return loss, metrics 
 
@@ -187,21 +198,27 @@ class FlowerClient(NumPyClient):
         self.net = net
         self.trainloader = trainloader
         self.testloader = testloader
+        logger.info("Client initialized.")
     
     def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
+        logger.info("Fetching model parameters...")
         return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters: list[np.ndarray]) -> None:
+        logger.info("Updating model parameters...")
         params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.net.load_state_dict(state_dict)
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
+        logger.info("Starting local training...")
         self.set_parameters(parameters)
         train(self.net, self.trainloader, epochs=NUM_EPOCHS)
+        logger.info("Local training complete.")
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
+        logger.info("Evaluating model...")
         self.set_parameters(parameters)
         loss, metrics = test(self.net, self.testloader)
         num_examples = len(self.testloader.dataset)
@@ -240,6 +257,8 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
 # -------------------------
 
 def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):
+    #logger = create_logger("server.log")
+    
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
     server_ip = "192.168.18.12"
