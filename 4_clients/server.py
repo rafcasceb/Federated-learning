@@ -6,33 +6,28 @@ from flwr.server.strategy import FedAvg
 from task import create_logger
 
 
+
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
+
+
 
 # -------------------------
 # 1. Obtain metrics
 # -------------------------
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-    precisions = [num_examples * m["precision"] for num_examples, m in metrics]
-    recalls = [num_examples * m["recall"] for num_examples, m in metrics]
-    f1_scores = [num_examples * m["f1_score"] for num_examples, m in metrics]
+    aggregated_metrics = dict()
+    total_num_cases = sum(num_cases for num_cases, _ in metrics)
     
-    num_examples_list = [num_examples for num_examples, _ in metrics]
-    total_num_examples = sum(num_examples_list)
+    for metric in METRICS_NAMES:
+        weighted_sum = sum(num_cases * m[metric] for num_cases, m in metrics)
+        aggregated_metrics[metric] = weighted_sum / total_num_cases
 
-    aggregated_metrics = {
-        "accuracy": sum(accuracies) / total_num_examples,
-        "precision": sum(precisions) / total_num_examples,
-        "recall": sum(recalls) / total_num_examples,
-        "f1_score": sum(f1_scores) / total_num_examples,
-    }
-        
-    logger_server.info("Round metrics -"
-            f"Accuracy: {aggregated_metrics['accuracy']:.2f}, "
-            f"Precision: {aggregated_metrics['precision']:.2f}, "
-            f"Recall: {aggregated_metrics['recall']:.2f}, "
-            f"F1 Score: {aggregated_metrics['f1_score']:.2f}")
+    logger_server.info(
+        f"Round metrics -- " + ", ".join(
+            [f"{metric.capitalize()}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
+        )
+    )
     
     return aggregated_metrics
 
@@ -40,19 +35,15 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 # -------------------------
-# 2. Log round
+# 3. Configure server
 # -------------------------
+
 def on_fit_config_fn(server_round: int):
     '''Log the round number'''
     logger_server.info(f"[ROUND {server_round}]")
     return {}
 
 
-
-
-# -------------------------
-# 3. Configure server
-# -------------------------
 def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
     config = ServerConfig(
         num_rounds = 20,
