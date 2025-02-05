@@ -23,7 +23,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         weighted_sum = sum(num_cases * m[metric] for num_cases, m in metrics)
         aggregated_metrics[metric] = weighted_sum / total_num_cases
 
-    logger_server.info(
+    logger.info(
         f"Round metrics -- " + ", ".join(
             [f"{metric.capitalize()}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
         )
@@ -40,7 +40,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 def on_fit_config_fn(server_round: int):
     '''Log the round number'''
-    logger_server.info(f"[ROUND {server_round}]")
+    logger.info(f"[ROUND {server_round}]")
     return {}
 
 
@@ -70,9 +70,9 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 if __name__ == "__main__":
     # Function start_server is deprecated but it is the only current way to use a custom server_ip
     
-    logger_server = create_logger("server.log")
+    logger = create_logger("server.log")
     
-    logger_server.info("Starting FL server...")
+    logger.info("Starting FL server...")
     
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     
     config, strategy = configure_server()
     
-    logger_server.info("Server configuration complete. Listening on %s", server_address)
+    logger.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
         server_address=server_address,
@@ -90,4 +90,4 @@ if __name__ == "__main__":
         strategy=strategy,
     )
 
-    logger_server.info("Closing FL server...")
+    logger.info("Closing FL server...")
