@@ -72,16 +72,15 @@ if __name__ == "__main__":
     
     logger = create_logger("server.log")
     
-    logger.info("Starting FL server...")
-    
     #server_ip = input("SERVER IP: ") 
     #server_port = input("SERVER PORT: ") 
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
-    config, strategy = configure_server()
+    logger.info("Starting FL server...")
     
+    config, strategy = configure_server()
     logger.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
@@ -89,5 +88,4 @@ if __name__ == "__main__":
         config=config,
         strategy=strategy,
     )
-
     logger.info("Closing FL server...")

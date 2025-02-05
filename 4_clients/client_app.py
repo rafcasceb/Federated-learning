@@ -137,8 +137,6 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
             
         epoch_loss = total_loss / len(train_data.dataset)  # Calculate average loss per sample
         logger.info(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.4f}")
-    
-    logger.info("Training completed.")
 
 
 
@@ -211,6 +209,7 @@ class FlowerClient(NumPyClient):
         self.net.load_state_dict(state_dict)
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
+        logger.info("[NEW ROUND]")
         logger.info("Starting local training...")
         self.set_parameters(parameters)
         train(self.net, self.trainloader, epochs=NUM_EPOCHS)
@@ -223,6 +222,7 @@ class FlowerClient(NumPyClient):
         loss, metrics = test(self.net, self.testloader)
         num_examples = len(self.testloader.dataset)
         return loss, num_examples, metrics
+
 
 
 def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
@@ -265,8 +265,10 @@ def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_nam
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"  
-
+    
+    logger.info("Starting FL client...")
     start_client(
         server_address=server_address,
         client=client_fn(excel_file_name, temp_csv_file_name, context),
     )
+    logger.info("Closing FL client...")
