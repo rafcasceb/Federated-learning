@@ -4,6 +4,7 @@ from logging.handlers import RotatingFileHandler
 from logging import Logger
 
 
+
 def create_logger(filename: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
     """It creates a logger for either the server or a client."""
     
@@ -26,26 +27,3 @@ def create_logger(filename: str, max_bytes: int=10_000_000, backup_count: int=1)
     logger.addHandler(handler_server)
          
     return logger
-
-
-logger = create_logger("client.log")
-
-
-
-
-
-
-
-
-'''
-# Configure logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("server.log"),  # Log to file
-        # logging.StreamHandler()  # Log to console
-    ]
-)
-server_logger_2 = logging.getLogger(__name__)
-'''

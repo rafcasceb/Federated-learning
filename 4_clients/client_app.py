@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from torch.utils.data import DataLoader, TensorDataset
 
-from task import create_logger, logger
+from task import create_logger
 
 
 
@@ -24,7 +24,7 @@ LEARNING_RATE = 0.001
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
 NUM_EPOCHS = 8
-#logger = None
+logger = None
 
 
 
@@ -256,8 +256,9 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
 # 5. Main Execution (legacy mode)
 # -------------------------
 
-def start_flower_client(excel_file_name: str, temp_csv_file_name:str, context: Context):
-    #logger = create_logger("server.log")
+def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_name:str, context: Context):
+    global logger
+    logger = create_logger(logger_name)
     
     #server_ip = input("SERVER IP: ")
     #server_port = input("SERVER PORT: ")
