@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from flwr.client import ClientApp, NumPyClient, start_client
 from flwr.common import Context
-from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score)
+from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score, balanced_accuracy_score, matthews_corrcoef)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
@@ -120,6 +120,7 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
+    logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS)
     logger.info("Starting training for %d epochs...", epochs)
     
     for epoch in range(epochs):
@@ -136,7 +137,7 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
             total_loss += loss.item() * inputs.size(0)  # Multiply single loss times batch size
             
         epoch_loss = total_loss / len(train_data.dataset)  # Calculate average loss per sample
-        logger.info(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.4f}")
+        logger.info("Epoch %d/%d - Loss: %.4f", epoch+1, epochs, epoch_loss)
 
 
 
@@ -146,6 +147,8 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
     total_samples = 0
     all_labels = []
     all_predictions = []
+    
+    logger.info("Using threshold %.2f for binarization", BINARIZATION_THRESHOLD)
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
@@ -169,17 +172,23 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
     
     # Calculate average metrics
     loss = total_loss / total_samples
-    accuracy = accuracy_score(all_labels, all_predictions)
-    precision = precision_score(all_labels, all_predictions, zero_division=0)     # true_positives / (true_positives + false_positives)
-    recall = recall_score(all_labels, all_predictions, zero_division=0)           # true_positives / (true_positives + false_negatives)
+    accuracy = accuracy_score(all_labels, all_predictions)                        # (TP+FN) / (TP+TN+FP+FN)  =  accurate_predictions / all_predictions
+    precision = precision_score(all_labels, all_predictions, zero_division=0)     # TP / (TP+FP)  =  TP / predicted_positives
+    recall = recall_score(all_labels, all_predictions, zero_division=0)           # TP / (TP+FN)  =  TP / real_positives
     f1 = f1_score(all_labels, all_predictions, zero_division=0)                   # 2 * (precision * recall) / (precision + recall)
+    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalaned DS (the lower than accuracy, the more imbalanced)
+    mcc = matthews_corrcoef(all_labels, all_predictions)                          # randomness of predictions for imbalanced DS (-1=wrong, 0=random, 1=perfect)
     
-    metrics = {"accuracy": accuracy,
-               "precision": precision,
-               "recall": recall,
-               "f1_score": f1}
-           
-    logger.info(f"Evaluation - Loss: {loss:.4f}, Accuracy: {accuracy:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}, F1: {f1:.2f}")
+    metrics = {"Accuracy": accuracy,
+               "Precision": precision,
+               "Recall": recall,
+               "F1 score": f1,
+               "Balanced accuracy": balanced_acc,
+               "MCC": mcc}
+    
+    logger.info("Loss: %.4f", loss)
+    logger.info("Metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
+                accuracy, precision, recall, f1, balanced_acc, mcc)
     
     return loss, metrics 
 
@@ -209,7 +218,7 @@ class FlowerClient(NumPyClient):
         self.net.load_state_dict(state_dict)
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
-        logger.info("[NEW ROUND]")
+        logger.info(""); logger.info("=== [NEW TRAINING ROUND] ===")
         logger.info("Starting local training...")
         self.set_parameters(parameters)
         train(self.net, self.trainloader, epochs=NUM_EPOCHS)
@@ -217,7 +226,8 @@ class FlowerClient(NumPyClient):
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
-        logger.info("Evaluating model...")
+        logger.info("=== [EVALUATION REPORT] ===")
+        logger.info("Starting local model evaluation...")
         self.set_parameters(parameters)
         loss, metrics = test(self.net, self.testloader)
         num_examples = len(self.testloader.dataset)

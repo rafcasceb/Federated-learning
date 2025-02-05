@@ -7,7 +7,7 @@ from task import create_logger
 
 
 
-METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
+METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
 
 
 
@@ -25,7 +25,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
     logger.info(
         f"Round metrics -- " + ", ".join(
-            [f"{metric.capitalize()}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
+            [f"{metric}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
         )
     )
     
