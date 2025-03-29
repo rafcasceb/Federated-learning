@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import os
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -9,13 +10,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from flwr.client import ClientApp, NumPyClient, start_client
 from flwr.common import Context
-from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score, balanced_accuracy_score, matthews_corrcoef)
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
+                             matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils import shuffle
+from task import create_logger, preprocess_data
 from torch.utils.data import DataLoader, TensorDataset
-
-from task import create_logger
 
 
 
@@ -32,34 +32,18 @@ logger = None
 # 1. Data Preparation
 # -------------------------
 
-def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
-    for col in data.columns:
-        data[col] = data[col].astype(str).str.replace(',', '.')
-    
-    data['case_csPCa'] = data['case_csPCa'].map({'YES': 1, 'NO': 0}).astype(int)
-    
-    for col in data.columns:
-        data[col] = pd.to_numeric(data[col], errors='coerce')
-
-    # Replace NaN values with column medians
-    if data.isnull().sum().sum() > 0:
-        data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
-
-    data = data.drop(columns=["study_id"])
-    data_shuffled = shuffle(data)
-    
-    print(data)
-    return data_shuffled
-    
-    
-
 def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    logger.info("Loading data from %s", excel_file_name)
+    folder_name = "data"
+    excel_path = os.path.join(folder_name, excel_file_name)
+    temp_csv_path = os.path.join(folder_name, temp_csv_file_name)
+    os.makedirs(folder_name, exist_ok=True)
+    
+    logger.info("Loading data from %s", excel_path)
     
     # Read Excel file and convert it into CSV for confort
-    data_excel = pd.read_excel(excel_file_name)
-    data_excel.to_csv(temp_csv_file_name, sep=";", index=False)
-    data = pd.read_csv(temp_csv_file_name, sep=";")    
+    data_excel = pd.read_excel(excel_path)
+    data_excel.to_csv(temp_csv_path, sep=";", index=False)
+    data = pd.read_csv(temp_csv_path, sep=";")    
     logger.info("Data loaded. Shape: %s", data.shape)
     
     data = preprocess_data(data)
