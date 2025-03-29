@@ -44,7 +44,7 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
     logger.setLevel(logging.DEBUG)
     logger.propagate = False  # Prevents logging to console
 
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s:  %(message)s')
     handler = RotatingFileHandler(filename=file_path, maxBytes=max_bytes, backupCount=backup_count)
     handler.namer = lambda filename: filename.replace(".log.", ".") + ".log"  # Modify naming convention: logfile.log.1 → logfile.1.log
     handler.setFormatter(formatter)

@@ -32,12 +32,11 @@ logger = None
 # 1. Data Preparation
 # -------------------------
 
-def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def read_data(excel_file_name: str, temp_csv_file_name:str):
     folder_name = "data"
     excel_path = os.path.join(folder_name, excel_file_name)
     temp_csv_path = os.path.join(folder_name, temp_csv_file_name)
     os.makedirs(folder_name, exist_ok=True)
-    
     logger.info("Loading data from %s", excel_path)
     
     # Read Excel file and convert it into CSV for confort
@@ -46,6 +45,11 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     data = pd.read_csv(temp_csv_path, sep=";")    
     logger.info("Data loaded. Shape: %s", data.shape)
     
+    return data
+
+
+def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    data = read_data(excel_file_name, temp_csv_file_name)
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
 
