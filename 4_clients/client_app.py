@@ -27,6 +27,12 @@ NUM_EPOCHS = 8
 logger = None
 
 
+# Set the random seed for testing reproducibility
+np.random.seed(64)
+torch.manual_seed(64)
+
+
+
 
 # -------------------------
 # 1. Data Preparation
