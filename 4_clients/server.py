@@ -35,7 +35,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 # -------------------------
-# 3. Configure server
+# 2. Configure server
 # -------------------------
 
 def on_fit_config_fn(server_round: int):
@@ -64,7 +64,7 @@ def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
 
 
 # -------------------------
-# 4. Main Execution (legacy mode)
+# 3. Main Execution (legacy mode)
 # -------------------------
 
 if __name__ == "__main__":

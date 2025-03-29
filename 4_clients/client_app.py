@@ -84,19 +84,18 @@ class NeuralNetwork(nn.Module):
 
     def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int) -> None:
         super(NeuralNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_sizes[0])       # Fully connected layer 1
-        self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])  # Fully connected layer 2
-        self.fc3 = nn.Linear(hidden_sizes[1], output_size)      # Fully connected layer 3 (output)
-        self.relu = nn.ReLU()                                   # Activation function
+        
+        layers = []
+        layers.append(nn.Linear(input_size, hidden_sizes[0]))
+        for in_size, out_size in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+            layers.append(nn.Linear(in_size, out_size))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(hidden_sizes[-1], output_size))
+        
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.fc1(x)
-        out = self.relu(out)
-        out = self.fc2(out)
-        out = self.relu(out)
-        out = self.fc3(out)
-        return out
-
+        return self.net(x)
 
 
 
