@@ -1,6 +1,6 @@
 from collections import OrderedDict
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ logger = None
 # 1. Data Preparation
 # -------------------------
 
-def read_data(excel_file_name: str, temp_csv_file_name:str):
+def __read_data(excel_file_name: str, temp_csv_file_name:str):
     folder_name = "data"
     excel_path = os.path.join(folder_name, excel_file_name)
     temp_csv_path = os.path.join(folder_name, temp_csv_file_name)
@@ -49,7 +49,7 @@ def read_data(excel_file_name: str, temp_csv_file_name:str):
 
 
 def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    data = read_data(excel_file_name, temp_csv_file_name)
+    data = __read_data(excel_file_name, temp_csv_file_name)
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
 
@@ -127,6 +127,26 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
         logger.info("Epoch %d/%d - Loss: %.4f", epoch+1, epochs, epoch_loss)
 
 
+def __calculate_average_test_metrics(all_labels: List[int], all_predictions: List[int]) -> Dict[str,float]:
+    accuracy = accuracy_score(all_labels, all_predictions)                        # (TP+FN) / (TP+TN+FP+FN)  =  accurate_predictions / all_predictions
+    precision = precision_score(all_labels, all_predictions, zero_division=0)     # TP / (TP+FP)  =  TP / predicted_positives
+    recall = recall_score(all_labels, all_predictions, zero_division=0)           # TP / (TP+FN)  =  TP / real_positives
+    f1 = f1_score(all_labels, all_predictions, zero_division=0)                   # 2 * (precision * recall) / (precision + recall)
+    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalaned DS (the lower than accuracy, the more imbalanced)
+    mcc = matthews_corrcoef(all_labels, all_predictions)                          # randomness of predictions for imbalanced DS (-1=wrong, 0=random, 1=perfect)
+    
+    metrics = {"Accuracy": accuracy,
+               "Precision": precision,
+               "Recall": recall,
+               "F1 score": f1,
+               "Balanced accuracy": balanced_acc,
+               "MCC": mcc}
+    
+    logger.info("Metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
+                accuracy, precision, recall, f1, balanced_acc, mcc)
+    
+    return metrics 
+
 
 def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
     model.eval()  # Evaluation model
@@ -157,25 +177,10 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
             all_labels.extend(labels.numpy())
             all_predictions.extend(predictions.detach().numpy())
     
-    # Calculate average metrics
     loss = total_loss / total_samples
-    accuracy = accuracy_score(all_labels, all_predictions)                        # (TP+FN) / (TP+TN+FP+FN)  =  accurate_predictions / all_predictions
-    precision = precision_score(all_labels, all_predictions, zero_division=0)     # TP / (TP+FP)  =  TP / predicted_positives
-    recall = recall_score(all_labels, all_predictions, zero_division=0)           # TP / (TP+FN)  =  TP / real_positives
-    f1 = f1_score(all_labels, all_predictions, zero_division=0)                   # 2 * (precision * recall) / (precision + recall)
-    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalaned DS (the lower than accuracy, the more imbalanced)
-    mcc = matthews_corrcoef(all_labels, all_predictions)                          # randomness of predictions for imbalanced DS (-1=wrong, 0=random, 1=perfect)
-    
-    metrics = {"Accuracy": accuracy,
-               "Precision": precision,
-               "Recall": recall,
-               "F1 score": f1,
-               "Balanced accuracy": balanced_acc,
-               "MCC": mcc}
-    
     logger.info("Loss: %.4f", loss)
-    logger.info("Metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
-                accuracy, precision, recall, f1, balanced_acc, mcc)
+    
+    metrics = __calculate_average_test_metrics(total_loss, total_samples, all_labels, all_predictions)
     
     return loss, metrics 
 
