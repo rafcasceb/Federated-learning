@@ -159,9 +159,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
-            # Replace NaN from labels and inputs
-            labels = torch.nan_to_num(labels, nan=-1)  # -1 or whichever we desire
-            inputs = torch.nan_to_num(inputs, nan=0)
+            ##! TODO: Assert no NaN in inputs and labels?
             
             # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
@@ -180,7 +178,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
     loss = total_loss / total_samples
     logger.info("Loss: %.4f", loss)
     
-    metrics = __calculate_average_test_metrics(total_loss, total_samples, all_labels, all_predictions)
+    metrics = __calculate_average_test_metrics(all_labels, all_predictions)
     
     return loss, metrics 
 

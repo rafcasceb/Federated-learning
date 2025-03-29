@@ -8,24 +8,29 @@ from sklearn.utils import shuffle
 
 
 def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.drop(columns=["study_id"])
+    
+    # Drop fully empty columns (all NaNs)
+    data = data.dropna(axis=1, how="all")
+    
+    # Map boolean column as number
+    mode_value = data["case_csPCa"].dropna().mode().iloc[0]
+    data['case_csPCa'] = data['case_csPCa'].map({'YES': 1, 'NO': 0}).fillna(mode_value).astype(int)
+
+    # Format numbers
     for col in data.columns:
         data[col] = data[col].astype(str).str.replace(',', '.')
-    
-    data['case_csPCa'] = data['case_csPCa'].map({'YES': 1, 'NO': 0}).astype(int)
-    
-    for col in data.columns:
         data[col] = pd.to_numeric(data[col], errors='coerce')
 
     # Replace NaN values with column medians
-    if data.isnull().sum().sum() > 0:
-        data = data.apply(lambda col: col.fillna(col.median()) if col.isnull().any() else col)
+    numeric_cols = data.select_dtypes(include=["number"]).columns
+    for col in numeric_cols:
+        data[col] = data[col].fillna(data[col].median())
 
-    data = data.drop(columns=["study_id"])
     data_shuffled = shuffle(data)
+    print(data_shuffled)
     
-    print(data)
     return data_shuffled
-
 
 
 def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
