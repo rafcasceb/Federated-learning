@@ -138,7 +138,7 @@ def __calculate_average_test_metrics(all_labels: List[int], all_predictions: Lis
     precision = precision_score(all_labels, all_predictions, zero_division=0)     # TP / (TP+FP)  =  TP / predicted_positives
     recall = recall_score(all_labels, all_predictions, zero_division=0)           # TP / (TP+FN)  =  TP / real_positives
     f1 = f1_score(all_labels, all_predictions, zero_division=0)                   # 2 * (precision * recall) / (precision + recall)
-    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalaned DS (the lower than accuracy, the more imbalanced)
+    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalanced DS (the lower than accuracy, the more imbalanced)
     mcc = matthews_corrcoef(all_labels, all_predictions)                          # randomness of predictions for imbalanced DS (-1=wrong, 0=random, 1=perfect)
     
     metrics = {"Accuracy": accuracy,

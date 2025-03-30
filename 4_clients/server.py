@@ -1,8 +1,9 @@
 from typing import List, Tuple
 
-from flwr.common import Metrics
+from flwr.common import Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerConfig, start_server
-from flwr.server.strategy import FedAvg
+from flwr.server.strategy import FedAvg, FedProx, FedAdagrad
+from client_app import NeuralNetwork
 from task import create_logger
 
 
@@ -44,20 +45,33 @@ def on_fit_config_fn(server_round: int):
     return {}
 
 
-def configure_server() -> Tuple[ServerConfig, FedAvg]:
+def get_initial_parameters():
+    """Initialize the model and convert parameters to Flower format."""
+    input_size = 3  # Change this based on feature count
+    hidden_sizes = [128, 128]
+    output_size = 1
+
+    model = NeuralNetwork(input_size, hidden_sizes, output_size)
+    numpy_params = [val.cpu().numpy() for _, val in model.state_dict().items()]
+
+    return ndarrays_to_parameters(numpy_params)
+
+
+def configure_server() -> Tuple[ServerConfig, FedAdagrad]:
     config = ServerConfig(
         num_rounds=20,
         round_timeout=600
     )
 
-    strategy = FedAvg(
+    strategy = FedAdagrad(
+        initial_parameters=get_initial_parameters(),
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=on_fit_config_fn,
-        min_fit_clients=2,       # minimum of clients in a training round
-        min_evaluate_clients=2,  # minimum of clients for evaluation
-        min_available_clients=2  # minimum of clients to stablish connection (modify for testing)
+        min_fit_clients=2,       
+        min_evaluate_clients=2,  
+        min_available_clients=2  
     )   
-    
+
     return config, strategy
 
 
