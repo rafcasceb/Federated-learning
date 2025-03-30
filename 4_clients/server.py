@@ -44,16 +44,16 @@ def on_fit_config_fn(server_round: int):
     return {}
 
 
-def configure_server() -> Tuple[FedAvg, ServerConfig, ServerApp]:
+def configure_server() -> Tuple[ServerConfig, FedAvg]:
     config = ServerConfig(
-        num_rounds = 20,
+        num_rounds=20,
         round_timeout=600
     )
 
     strategy = FedAvg(
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=on_fit_config_fn,
-        min_fit_clients=2,       # minimum of clients in a round
+        min_fit_clients=2,       # minimum of clients in a training round
         min_evaluate_clients=2,  # minimum of clients for evaluation
         min_available_clients=2  # minimum of clients to stablish connection (modify for testing)
     )   
