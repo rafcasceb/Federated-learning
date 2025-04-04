@@ -21,16 +21,19 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 BATCH_SIZE = 16
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
-NUM_EPOCHS = 8
+NUM_EPOCHS = 50
+TEST_SIZE = 0.2
+DROPOUT = 0.1
 logger = None
 
 
 # Set the random seed for testing reproducibility
-np.random.seed(64)
-torch.manual_seed(64)
+np.random.seed(55)
+torch.manual_seed(55)
+RANDOM_STATE = 42
 
 
 
@@ -65,7 +68,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     y = data.iloc[:, -1].values   # Output characteristics (labels);     last column
     
     # Divide data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
 
     # Standardize input characteristics
     scaler = StandardScaler()
@@ -98,7 +101,7 @@ class NeuralNetwork(nn.Module):
         init.kaiming_uniform_(layers[-1].weight, nonlinearity='relu')
         layers.append(nn.BatchNorm1d(hidden_sizes[0]))  
         layers.append(nn.ReLU())
-        layers.append(nn.Dropout(0.1))  
+        layers.append(nn.Dropout(DROPOUT))  
 
         for in_size, out_size in zip(hidden_sizes[:-1], hidden_sizes[1:]):
             layers.append(nn.Linear(in_size, out_size))
