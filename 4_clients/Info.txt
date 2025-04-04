@@ -84,3 +84,6 @@ MNIST dataset:
 
 
 No es necesario abrir nuevos puertos para los clientes en este caso, ya que se están conectando al mismo servidor. La única necesidad de diferentes puertos sería si estuvieses ejecutando múltiples servidores de Flower en la misma máquina, lo cual no es el caso aquí.
+
+
+pip install seaborn

@@ -5,6 +5,8 @@ from logging.handlers import RotatingFileHandler
 
 import pandas as pd
 from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
@@ -31,6 +33,46 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     print(data_shuffled)
     
     return data_shuffled
+
+
+def plot_function(x, y, label, x_label, y_label, title):
+    plt.scatter(x, y)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.show()
+    
+def plot_seaborn_function(data, x_label, y_label, title):
+    #sns.lineplot(data=data, x=x_label, y=y_label)  # líneas pero es raro
+    #sns.histplot(data[x_label], kde=True)  # histograma
+    #sns.boxplot(data=data, x=x_label)  # diagrama de caja
+    #sns.boxplot(data=data)  # diagrama de caja
+    #sns.lmplot(data=data, x=x_label, y=y_label)  # scatter plot with regression line
+    #sns.regplot(x=x_label, y=y_label, data=data)
+    #sns.pairplot(data)  # scatter de todos
+    # sns.countplot(x=x_label, data=data)  # num samples or value
+
+    corr = data.corr(numeric_only=True)
+    sns.heatmap(corr, annot=True, cmap="coolwarm")
+    
+    plt.title(title)
+    plt.show()
+    
+def plot_data(data):
+    # Boxplots
+    fig, axes = plt.subplots(3, 1)
+    fig.suptitle("Box Plots")
+    sns.boxplot(data=data, x=data["patient_age"], ax=axes[0])
+    sns.boxplot(data=data, x=data["psa"], ax=axes[1])
+    sns.boxplot(data=data, x=data["prostate_volume"], ax=axes[2])
+    plt.tight_layout()
+    plt.show()
+    
+    # Correlation matrix
+    plt.title("Correlation matrix")
+    corr = data.corr(numeric_only=True)
+    sns.heatmap(corr, annot=True, cmap="coolwarm")
+    plt.show()
 
 
 def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:

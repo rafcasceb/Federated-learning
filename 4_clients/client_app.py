@@ -15,7 +15,7 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from task import create_logger, preprocess_data
+from task import create_logger, plot_function, preprocess_data, plot_seaborn_function, plot_data
 from torch.utils.data import DataLoader, TensorDataset
 
 
@@ -24,7 +24,7 @@ BATCH_SIZE = 16
 LEARNING_RATE = 0.0001
 HIDDEN_SIZES = [128, 128]
 BINARIZATION_THRESHOLD = 0.4
-NUM_EPOCHS = 50
+NUM_EPOCHS = 10 #50
 TEST_SIZE = 0.2
 DROPOUT = 0.1
 logger = None
@@ -54,7 +54,7 @@ def __read_data(excel_file_name: str, temp_csv_file_name:str):
     data_excel.to_csv(temp_csv_path, sep=";", index=False)
     data = pd.read_csv(temp_csv_path, sep=";")    
     logger.info("Data loaded. Shape: %s", data.shape)
-    
+       
     return data
 
 
@@ -62,6 +62,15 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     data = __read_data(excel_file_name, temp_csv_file_name)
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
+    
+    #plot_seaborn_function(data, "patient_age", "psa", "Whatever")
+    #plot_seaborn_function(data, "patient_age", "prostate_volume", "Whatever")
+    #plot_seaborn_function(data, "prostate_volume", "psa", "Whatever")
+    # plot_seaborn_function(data, "patient_age", "psa", "Whatever")
+    # plot_seaborn_function(data, "patient_age", "case_csPCa", "Whatever")
+    # plot_function(data["patient_age"], data["case_csPCa"], "IDK", "Patient age", "Case csPCa", "Yeah?")
+    
+    plot_data(data)
 
     # Separata data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
