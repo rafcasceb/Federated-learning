@@ -35,30 +35,19 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     return data_shuffled
 
 
-def plot_function(x, y, label, x_label, y_label, title):
+def old_plot_function(x, y, x_label, y_label, title):
     plt.scatter(x, y)
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.show()
-    
-def plot_seaborn_function(data, x_label, y_label, title):
-    #sns.lineplot(data=data, x=x_label, y=y_label)  # líneas pero es raro
-    #sns.histplot(data[x_label], kde=True)  # histograma
-    #sns.boxplot(data=data, x=x_label)  # diagrama de caja
-    #sns.boxplot(data=data)  # diagrama de caja
-    #sns.lmplot(data=data, x=x_label, y=y_label)  # scatter plot with regression line
-    #sns.regplot(x=x_label, y=y_label, data=data)
-    #sns.pairplot(data)  # scatter de todos
-    # sns.countplot(x=x_label, data=data)  # num samples or value
-
-    corr = data.corr(numeric_only=True)
-    sns.heatmap(corr, annot=True, cmap="coolwarm")
-    
-    plt.title(title)
-    plt.show()
-    
+  
 def plot_data(data):
+    folder_name = "plots"
+    os.makedirs(folder_name, exist_ok=True)
+    boxplot_path = os.path.join(folder_name, "data_boxplot.png")
+    corr_matrix_path = os.path.join(folder_name, "data_corr_matrix.png")
+    
     # Boxplots
     fig, axes = plt.subplots(3, 1)
     fig.suptitle("Box Plots")
@@ -66,13 +55,18 @@ def plot_data(data):
     sns.boxplot(data=data, x=data["psa"], ax=axes[1])
     sns.boxplot(data=data, x=data["prostate_volume"], ax=axes[2])
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    plt.savefig(boxplot_path)
+    plt.close()
     
     # Correlation matrix
     plt.title("Correlation matrix")
     corr = data.corr(numeric_only=True)
     sns.heatmap(corr, annot=True, cmap="coolwarm")
-    plt.show()
+    plt.tight_layout()
+    #plt.show()
+    plt.savefig(corr_matrix_path)
+    plt.close()
 
 
 def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
