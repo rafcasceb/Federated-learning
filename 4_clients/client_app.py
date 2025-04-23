@@ -21,7 +21,7 @@ from torchmetrics import MeanMetric
 from torchmetrics.classification import Accuracy, F1Score, Precision, Recall, BinaryAccuracy
 
 
-
+# Hyperparameters
 BATCH_SIZE = 16
 LEARNING_RATE = 0.0001
 HIDDEN_SIZES = [128, 128]
@@ -29,15 +29,15 @@ BINARIZATION_THRESHOLD = 0.4
 NUM_EPOCHS = 10 #50
 TEST_SIZE = 0.2
 DROPOUT = 0.1
-logger = None
 
-
-# Set the random seed for testing reproducibility
+# Random seeds set for testing reproducibility
 np.random.seed(55)
 torch.manual_seed(55)
 RANDOM_STATE = 42
 
-# For plotting
+# Others
+logger = None
+CLIENT_NUMBER = None
 general_epoch_train_loss = []
 general_epoch_train_acc = []
 general_round_test_loss = []
@@ -71,7 +71,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
        
-    plot_loaded_data(data)
+    plot_loaded_data(data, CLIENT_NUMBER)
 
     # Separata data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
@@ -299,9 +299,12 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
 # 5. Main Execution (legacy mode)
 # -------------------------
 
-def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_name:str, context: Context):
+def start_flower_client(client_number: int, excel_file_name: str, temp_csv_file_name: str, logger_name: str, context: Context):
     global logger
     logger = create_logger(logger_name)
+    
+    global CLIENT_NUMBER
+    CLIENT_NUMBER = client_number
     
     server_ip = "192.168.18.12"
     server_port = "8081"
@@ -315,5 +318,4 @@ def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_nam
     logger.info("Closing FL client...")
     
     plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
-                           general_round_test_acc, general_round_test_loss, NUM_EPOCHS)
-    
+                           general_round_test_acc, general_round_test_loss, CLIENT_NUMBER, NUM_EPOCHS)

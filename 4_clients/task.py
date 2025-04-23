@@ -35,11 +35,11 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     return data_shuffled
 
 
-def plot_loaded_data(data):
+def plot_loaded_data(data, client_number):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
-    boxplot_path = os.path.join(folder_name, "data_boxplot.png")
-    corr_matrix_path = os.path.join(folder_name, "data_corr_matrix.png")
+    boxplot_path = os.path.join(folder_name, f"data_boxplot_{client_number}.png")
+    corr_matrix_path = os.path.join(folder_name, f"data_corr_matrix_{client_number}.png")
     
     # Boxplots
     fig, axes = plt.subplots(3, 1)
@@ -60,11 +60,11 @@ def plot_loaded_data(data):
     plt.close()
 
 
-def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, num_epochs_by_round, num_rounds=20):
+def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_number, num_epochs_by_round, num_rounds=20):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
-    accuracies_path = os.path.join(folder_name, "training_testing_acc.png")
-    loss_path = os.path.join(folder_name, "training_testing_loss.png")
+    accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_number}.png")
+    loss_path = os.path.join(folder_name, f"training_testing_loss_{client_number}.png")
     
     total_num_rounds = range(1, num_rounds +1)
     total_num_epochs = range(1, num_epochs_by_round*num_rounds +1)

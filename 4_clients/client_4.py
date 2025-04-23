@@ -8,5 +8,5 @@ if __name__ == "__main__":
     temp_csv_file_name = f"temp_database_{CLIENT_NUMBER}.csv"
     logger_name = f"client{CLIENT_NUMBER}.log"
     
-    start_flower_client(excel_file_name, temp_csv_file_name, logger_name, context=None)
+    start_flower_client(CLIENT_NUMBER, excel_file_name, temp_csv_file_name, logger_name, context=None)
     
