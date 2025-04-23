@@ -1,8 +1,8 @@
 from typing import List, Tuple
 
 from flwr.common import Metrics
-from flwr.server import ServerApp, ServerConfig, start_server
-from flwr.server.strategy import FedAvg, FedProx
+from flwr.server import ServerConfig, start_server
+from flwr.server.strategy import FedProx
 from task import create_logger
 
 

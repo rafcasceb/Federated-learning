@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
-from flwr.client import ClientApp, NumPyClient, start_client
+from flwr.client import NumPyClient, start_client
 from flwr.common import Context
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
@@ -73,25 +73,25 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
        
     plot_loaded_data(data, CLIENT_NUMBER)
 
-    # Separata data into inputs (X) and outputs (y)
-    X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
+    # Separata data into inputs (x) and outputs (y)
+    x = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
     y = data.iloc[:, -1].values   # Output characteristics (labels);     last column
     
     # Divide data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
 
     # Standardize input characteristics
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    x_train = scaler.fit_transform(x_train)
+    x_test = scaler.transform(x_test)
     
     # Convert data into PyTorch tensors
-    X_train = torch.tensor(X_train, dtype=torch.float32)
+    x_train = torch.tensor(x_train, dtype=torch.float32)
     y_train = torch.tensor(y_train, dtype=torch.float32)
-    X_test = torch.tensor(X_test, dtype=torch.float32)
+    x_test = torch.tensor(x_test, dtype=torch.float32)
     y_test = torch.tensor(y_test, dtype=torch.float32)
     
-    return X_train, y_train, X_test, y_test
+    return x_train, y_train, x_test, y_test
 
 
 
@@ -274,19 +274,19 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
     No need to pass a context for the moment.
     """
 
-    # Supposing X_train, y_train, X_test, y_test are tensors
-    X_train, y_train, X_test, y_test = load_data(excel_file_name, temp_csv_file_name)
+    # Supposing x_train, y_train, x_test, y_test are tensors
+    x_train, y_train, x_test, y_test = load_data(excel_file_name, temp_csv_file_name)
 
     # Create a TensorDataset
-    train_dataset = TensorDataset(X_train, y_train)
-    test_dataset = TensorDataset(X_test, y_test)
+    train_dataset = TensorDataset(x_train, y_train)
+    test_dataset = TensorDataset(x_test, y_test)
     
     # Create a DataLodaer
     trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     # Create the neural network model
-    input_size = X_train.shape[1]
+    input_size = x_train.shape[1]
     output_size = 1
     net = NeuralNetwork(input_size, HIDDEN_SIZES, output_size)
     
