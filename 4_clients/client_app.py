@@ -15,8 +15,10 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from task import create_logger, plot_data, preprocess_data
+from task import create_logger, plot_accuracy_and_loss, plot_loaded_data, preprocess_data
 from torch.utils.data import DataLoader, TensorDataset
+from torchmetrics import MeanMetric
+from torchmetrics.classification import Accuracy, F1Score, Precision, Recall, BinaryAccuracy
 
 
 
@@ -34,6 +36,12 @@ logger = None
 np.random.seed(55)
 torch.manual_seed(55)
 RANDOM_STATE = 42
+
+# For plotting
+general_epoch_train_loss = []
+general_epoch_train_acc = []
+general_round_test_loss = []
+general_round_test_acc = []
 
 
 
@@ -63,7 +71,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
        
-    plot_data(data)
+    plot_loaded_data(data)
 
     # Separata data into inputs (X) and outputs (y)
     X = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
@@ -132,13 +140,16 @@ class NeuralNetwork(nn.Module):
 def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    accuracy_metric = BinaryAccuracy()
+    loss_metric = MeanMetric()
     
     logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS)
     logger.info("Starting training for %d epochs...", epochs)
     
     for epoch in range(epochs):
-        model.train()
-        total_loss = 0.0
+        model.train()  # Set to training mode
+        accuracy_metric.reset()
+        loss_metric.reset()
         
         for inputs, labels in train_data:
             optimizer.zero_grad()
@@ -146,11 +157,16 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
             loss = criterion(outputs.squeeze(), labels)
             loss.backward()
             optimizer.step()
-            
-            total_loss += loss.item() * inputs.size(0)  # Multiply single loss times batch size
-            
-        epoch_loss = total_loss / len(train_data.dataset)  # Calculate average loss per sample
-        logger.info("Epoch %d/%d - Loss: %.4f", epoch+1, epochs, epoch_loss)
+
+            accuracy_metric.update(torch.sigmoid(outputs).squeeze(), labels)
+            loss_metric.update(loss.item())
+        
+        epoch_accuracy = accuracy_metric.compute().item()
+        epoch_loss = loss_metric.compute().item()
+        logger.info("Epoch %d/%d -- Loss: %.4f, Accuracy: %.4f", epoch+1, epochs, epoch_loss, epoch_accuracy)
+    
+        general_epoch_train_acc.append(epoch_accuracy)
+        general_epoch_train_loss.append(epoch_loss)
 
 
 def __calculate_average_test_metrics(all_labels: List[int], all_predictions: List[int]) -> Dict[str,float]:
@@ -168,16 +184,15 @@ def __calculate_average_test_metrics(all_labels: List[int], all_predictions: Lis
                "Balanced accuracy": balanced_acc,
                "MCC": mcc}
     
-    logger.info("Metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
+    logger.info("Testing metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
                 accuracy, precision, recall, f1, balanced_acc, mcc)
     
     return metrics 
 
 
 def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
-    model.eval()  # Evaluation model
-    total_loss = 0.0
-    total_samples = 0
+    model.eval()  # Set to evaluation mode
+    loss_metric = MeanMetric()
     all_labels = []
     all_predictions = []
     
@@ -195,16 +210,18 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
             predictions = torch.nan_to_num(predictions, nan=0)
             
             # Collect labels and predictions
-            loss = F.binary_cross_entropy(outputs, labels)
-            total_loss += loss.item() * inputs.size(0)
-            total_samples += labels.size(0)
+            loss_tensor = F.binary_cross_entropy(outputs, labels)
+            loss_metric.update(loss_tensor.item())
             all_labels.extend(labels.numpy())
             all_predictions.extend(predictions.detach().numpy())
     
-    loss = total_loss / total_samples
+    loss = loss_metric.compute().item()
     logger.info("Loss: %.4f", loss)
     
     metrics = __calculate_average_test_metrics(all_labels, all_predictions)
+    
+    general_round_test_acc.append(metrics.get("Accuracy"))
+    general_round_test_loss.append(loss)
     
     return loss, metrics 
 
@@ -238,7 +255,7 @@ class FlowerClient(NumPyClient):
         logger.info("Starting local training...")
         self.set_parameters(parameters)
         train(self.net, self.trainloader, epochs=NUM_EPOCHS)
-        logger.info("Local training complete.")
+        logger.info("Local training complete")
         return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
@@ -286,8 +303,6 @@ def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_nam
     global logger
     logger = create_logger(logger_name)
     
-    #server_ip = input("SERVER IP: ")
-    #server_port = input("SERVER PORT: ")
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"  
@@ -298,3 +313,7 @@ def start_flower_client(excel_file_name: str, temp_csv_file_name:str, logger_nam
         client=client_fn(excel_file_name, temp_csv_file_name, context),
     )
     logger.info("Closing FL client...")
+    
+    plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
+                           general_round_test_acc, general_round_test_loss, NUM_EPOCHS)
+    

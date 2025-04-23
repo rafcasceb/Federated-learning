@@ -35,14 +35,7 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     return data_shuffled
 
 
-def old_plot_function(x, y, x_label, y_label, title):
-    plt.scatter(x, y)
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.show()
-  
-def plot_data(data):
+def plot_loaded_data(data):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
     boxplot_path = os.path.join(folder_name, "data_boxplot.png")
@@ -50,22 +43,55 @@ def plot_data(data):
     
     # Boxplots
     fig, axes = plt.subplots(3, 1)
-    fig.suptitle("Box Plots")
+    fig.suptitle("BOX PLOTS")
     sns.boxplot(data=data, x=data["patient_age"], ax=axes[0])
     sns.boxplot(data=data, x=data["psa"], ax=axes[1])
     sns.boxplot(data=data, x=data["prostate_volume"], ax=axes[2])
     plt.tight_layout()
-    #plt.show()
     plt.savefig(boxplot_path)
     plt.close()
     
     # Correlation matrix
-    plt.title("Correlation matrix")
+    plt.title("CORRELATION MATRIX")
     corr = data.corr(numeric_only=True)
     sns.heatmap(corr, annot=True, cmap="coolwarm")
     plt.tight_layout()
-    #plt.show()
     plt.savefig(corr_matrix_path)
+    plt.close()
+
+
+def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, num_epochs_by_round, num_rounds=20):
+    folder_name = "plots"
+    os.makedirs(folder_name, exist_ok=True)
+    accuracies_path = os.path.join(folder_name, "training_testing_acc.png")
+    loss_path = os.path.join(folder_name, "training_testing_loss.png")
+    
+    total_num_rounds = range(1, num_rounds +1)
+    total_num_epochs = range(1, num_epochs_by_round*num_rounds +1)
+    test_epochs = [round*num_epochs_by_round for round in total_num_rounds]
+    
+    plt.plot(total_num_epochs, train_acc, label="Training accuracy (by epochs)")
+    plt.plot(test_epochs, test_acc, label="Testing accuracy (by rounds)", marker="o")
+    plt.title("TRAINING VS TESTING ACCURACY")
+    plt.xlabel("Epochs")
+    plt.ylabel("Training vs Testing accuracy")
+    plt.legend()
+    for round in total_num_rounds:
+        plt.axvline(x=round*num_epochs_by_round, color="gray", linestyle="--", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(accuracies_path)
+    plt.close()
+    
+    plt.plot(total_num_epochs, train_loss, label="Training loss (by epochs)")
+    plt.plot(test_epochs, test_loss, label="Testing loss (by rounds)", marker="o")
+    plt.title("TRAINING VS TESTING LOSS")
+    plt.xlabel("Epochs")
+    plt.ylabel("Training vs Testing loss")
+    plt.legend()
+    for round in range(1, num_rounds):
+        plt.axvline(x=round*num_epochs_by_round, color="gray", linestyle="--", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(loss_path)
     plt.close()
 
 
@@ -95,3 +121,4 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
     logger.addHandler(handler)
          
     return logger
+
