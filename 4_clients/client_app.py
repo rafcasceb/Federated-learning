@@ -34,6 +34,7 @@ DROPOUT = 0.1
 np.random.seed(55)
 torch.manual_seed(55)
 RANDOM_STATE = 42
+SHUFFLE_LOADERS = False
 
 # Others
 logger = None
@@ -282,8 +283,8 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
     test_dataset = TensorDataset(x_test, y_test)
     
     # Create a DataLodaer
-    trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_LOADERS)
+    testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_LOADERS)
 
     # Create the neural network model
     input_size = x_train.shape[1]
