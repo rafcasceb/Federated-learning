@@ -60,36 +60,45 @@ def plot_loaded_data(data, client_number):
     plt.close()
 
 
-def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_number, num_epochs_by_round, num_rounds=20):
+def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_number, num_epochs_by_fold, num_rounds, num_cross_val_folds_round):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
     accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_number}.png")
     loss_path = os.path.join(folder_name, f"training_testing_loss_{client_number}.png")
     
-    total_num_rounds = range(1, num_rounds +1)
-    total_num_epochs = range(1, num_epochs_by_round*num_rounds +1)
-    test_epochs = [round*num_epochs_by_round for round in total_num_rounds]
+    num_epochs = num_rounds * num_cross_val_folds_round * num_epochs_by_fold
+    num_epochs_by_round = num_cross_val_folds_round * num_epochs_by_fold
     
-    plt.plot(total_num_epochs, train_acc, label="Training accuracy (by epochs)")
-    plt.plot(test_epochs, test_acc, label="Testing accuracy (by rounds)", marker="o")
+    range_num_rounds = range(1, num_rounds +1)
+    range_num_epochs = range(1, num_epochs +1)
+    range_test_epochs = range(num_epochs_by_fold, num_epochs +1, num_epochs_by_fold)  # test_epochs = [fold * num_epochs_by_fold for fold in range_num_cross_val_folds]  
+    range_end_round_epochs = range(num_epochs_by_round, num_epochs +1, num_epochs_by_round)
+    
+    # Keep only final test validation per round
+    for i in range_num_rounds:
+        test_acc.pop(i*num_cross_val_folds_round)
+        test_loss.pop(i*num_cross_val_folds_round) 
+    
+    plt.plot(range_num_epochs, train_acc, label="Training accuracy (by epochs)")
+    plt.plot(range_test_epochs, test_acc, label="Testing accuracy (by rounds)", marker="o")
     plt.title("TRAINING VS TESTING ACCURACY")
     plt.xlabel("Epochs")
     plt.ylabel("Training vs Testing accuracy")
     plt.legend()
-    for round in total_num_rounds:
-        plt.axvline(x=round*num_epochs_by_round, color="gray", linestyle="--", alpha=0.3)
+    for epoch in range_end_round_epochs:
+        plt.axvline(x=epoch, color="gray", linestyle="--", alpha=0.3)
     plt.tight_layout()
     plt.savefig(accuracies_path)
     plt.close()
     
-    plt.plot(total_num_epochs, train_loss, label="Training loss (by epochs)")
-    plt.plot(test_epochs, test_loss, label="Testing loss (by rounds)", marker="o")
+    plt.plot(range_num_epochs, train_loss, label="Training loss (by epochs)")
+    plt.plot(range_test_epochs, test_loss, label="Testing loss (by rounds)", marker="o")
     plt.title("TRAINING VS TESTING LOSS")
     plt.xlabel("Epochs")
     plt.ylabel("Training vs Testing loss")
     plt.legend()
-    for round in range(1, num_rounds):
-        plt.axvline(x=round*num_epochs_by_round, color="gray", linestyle="--", alpha=0.3)
+    for epoch in range_end_round_epochs:
+        plt.axvline(x=epoch, color="gray", linestyle="--", alpha=0.3)
     plt.tight_layout()
     plt.savefig(loss_path)
     plt.close()

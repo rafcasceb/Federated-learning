@@ -51,12 +51,12 @@ def configure_server() -> Tuple[ServerConfig, FedProx]:
     )
 
     strategy = FedProx(
-        fraction_fit=1.0,  # Fraction of clients that will be sampled per round
-        fraction_evaluate=1.0,  # Fraction of clients sampled for evaluation
+        fraction_fit=1.0,  # fraction of clients that will be sampled per round
+        fraction_evaluate=1.0,  # fraction of clients sampled for evaluation
         min_fit_clients=2,  # minimum of clients in a training round
         min_evaluate_clients=2,  # minimum of clients for evaluation
         min_available_clients=2,  # minimum of clients to stablish connection (modify for testing)
-        proximal_mu=0.01,  # Regularization strength
+        proximal_mu=0.01,  # regularization strength
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=on_fit_config_fn,
     )
