@@ -2,8 +2,7 @@ from typing import List, Tuple
 
 import yaml
 from flwr.common import Context, Metrics
-from flwr.server import (ServerApp, ServerAppComponents, ServerConfig,
-                         run_server, start_server)
+from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.server.strategy import FedProx
 from task import create_logger
 

@@ -3,7 +3,7 @@
 # run-config = "config.yaml"
 
 [project]
-name = "federated_learning_project"
+name = "fl_4_clients"
 version = "1.0.0"
 description = "Flower project with a server and some clients."
 
