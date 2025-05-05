@@ -1,11 +1,11 @@
 from typing import List, Tuple
 
-from flwr.common import Metrics
-from flwr.server import ServerConfig, start_server
+import yaml
+from flwr.common import Context, Metrics
+from flwr.server import (ServerApp, ServerAppComponents, ServerConfig,
+                         run_server, start_server)
 from flwr.server.strategy import FedProx
 from task import create_logger
-
-
 
 METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
 
@@ -38,16 +38,21 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # 2. Configure server
 # -------------------------
 
-def on_fit_config_fn(server_round: int):
+def __on_fit_config_fn(server_round: int):
     '''Log the round number'''
     logger.info(f"[ROUND {server_round}]")
     return {}
 
+def read_from_yaml(file_name: str):
+    with open(file_name, "r") as file:
+        run_config = yaml.safe_load(file)
+        return run_config
 
-def configure_server() -> Tuple[ServerConfig, FedProx]:
+
+def server_fn(context: Context) -> ServerAppComponents:
     config = ServerConfig(
         num_rounds=20,
-        round_timeout=600
+        round_timeout=600,
     )
 
     strategy = FedProx(
@@ -58,10 +63,10 @@ def configure_server() -> Tuple[ServerConfig, FedProx]:
         min_available_clients=2,  # minimum of clients to stablish connection (modify for testing)
         proximal_mu=0.01,  # regularization strength
         evaluate_metrics_aggregation_fn=weighted_average,
-        on_fit_config_fn=on_fit_config_fn,
+        on_fit_config_fn=__on_fit_config_fn,
     )
-
-    return config, strategy
+    
+    return ServerAppComponents(strategy=strategy, config=config)
 
 
 
@@ -70,25 +75,14 @@ def configure_server() -> Tuple[ServerConfig, FedProx]:
 # 3. Main Execution (legacy mode)
 # -------------------------
 
-if __name__ == "__main__":
-    # Function start_server is deprecated but it is the only current way to use a custom server_ip
-    
-    logger = create_logger("server.log")
-    
-    #server_ip = input("SERVER IP: ") 
-    #server_port = input("SERVER PORT: ") 
-    server_ip = "192.168.18.12"
-    server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"
-    
-    logger.info("Starting FL server...")
-    
-    config, strategy = configure_server()
-    logger.info("Server configuration complete. Listening on %s", server_address)
+logger = create_logger("server.log")
+logger.info("Starting FL server...")
 
-    start_server(
-        server_address=server_address,
-        config=config,
-        strategy=strategy,
-    )
-    logger.info("Closing FL server...")
+# server_ip = "192.168.18.12"
+# server_port = "8081"
+# server_address = f"{server_ip}:{server_port}"
+# logger.info("Server configuration complete. Listening on %s", server_address)
+
+logger.info("Server configuration complete.")
+app = ServerApp(server_fn=server_fn)
+logger.info("Closing FL server...")

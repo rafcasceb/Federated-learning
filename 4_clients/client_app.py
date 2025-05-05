@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
-from flwr.client import NumPyClient, start_client
+from flwr.client import NumPyClient, start_client, ClientApp
 from flwr.common import Context
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
@@ -41,7 +41,7 @@ SHUFFLE_LOADERS = False
 
 # Others
 logger = None
-CLIENT_NUMBER = None
+CLIENT_ID = None
 general_epoch_train_acc = []
 general_epoch_train_loss = []
 general_round_test_acc = []
@@ -75,7 +75,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
     data = preprocess_data(data)
     logger.info("Data preprocessing completed. Final shape: %s", data.shape)
        
-    plot_loaded_data(data, CLIENT_NUMBER)
+    plot_loaded_data(data, CLIENT_ID)
 
     # Separata data into inputs (x) and outputs (y)
     x = data.iloc[:, :-1].values  # Inputs characteristics (features);   all columns but last one
@@ -294,9 +294,16 @@ class FlowerClient(NumPyClient):
 
 
 
-def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
-    """ It creates an instance of FlowerClient with the configuration given. 
-    No need to pass a context for the moment. """
+def client_fn(context: Context) -> FlowerClient:
+    client_id = context.node_config["client_id"]    
+    excel_file_name = f"PI-CAI_3__part{client_id}.xlsx" 
+    temp_csv_file_name = f"temp_database_{client_id}.csv"
+    logger_name = f"client{client_id}.log"
+    
+    global logger
+    logger = create_logger(logger_name)
+    global CLIENT_ID
+    CLIENT_ID = client_id
     
     x, y = load_data(excel_file_name, temp_csv_file_name)
 
@@ -314,23 +321,14 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) ->
 # 5. Main Execution (legacy mode)
 # -------------------------
 
-def start_flower_client(client_number: int, excel_file_name: str, temp_csv_file_name: str, logger_name: str, context: Context):
-    global logger
-    logger = create_logger(logger_name)
-    global CLIENT_NUMBER
-    CLIENT_NUMBER = client_number
-    
-    server_ip = "192.168.18.12"
-    server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"  
-    
-    logger.info("Starting FL client...")
-    start_client(
-        server_address=server_address,
-        client=client_fn(excel_file_name, temp_csv_file_name, context),
-    )
-    logger.info("Closing FL client...")
-    
-    plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
-                           general_round_test_acc, general_round_test_loss,
-                           CLIENT_NUMBER, NUM_EPOCHS, NUM_ROUNDS, NUM_CROSS_VAL_FOLDS_ROUND)
+# server_ip = "192.168.18.12"
+# server_port = "8081"
+# server_address = f"{server_ip}:{server_port}"  
+
+logger.info("Starting FL client...")
+app = ClientApp(client_fn=client_fn)
+logger.info("Closing FL client...")
+
+plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
+                        general_round_test_acc, general_round_test_loss,
+                        CLIENT_ID, NUM_EPOCHS, NUM_ROUNDS, NUM_CROSS_VAL_FOLDS_ROUND)

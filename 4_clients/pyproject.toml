@@ -1,0 +1,27 @@
+#[tool.flower]
+#app = "server:app"
+# run-config = "config.yaml"
+
+[project]
+name = "federated_learning_project"
+version = "1.0.0"
+description = "Flower project with a server and some clients."
+
+[tool.flwr.app.components]
+serverapp = "server:app"
+clientapp = "client_app:app"
+
+[tool.flwr.app]
+publisher = "rafcasceb"
+
+[tool.flwr.federations]
+default = "server"
+
+[tool.flwr.federations.server]
+transport = "http"
+address = "[::]:8080"
+insecure = true
+
+[tool.flwr.federations.clients]
+transport = "http"
+insecure = true
