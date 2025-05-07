@@ -1,8 +1,8 @@
 from typing import List, Tuple
 
 import yaml
-from flwr.common import Context, Metrics
-from flwr.server import ServerApp, ServerAppComponents, ServerConfig
+from flwr.common import Metrics
+from flwr.server import ServerConfig
 from flwr.server.strategy import FedProx
 from task import create_logger
 
@@ -48,10 +48,10 @@ def read_from_yaml(file_name: str):
         return run_config
 
 
-def server_fn(context: Context) -> ServerAppComponents:
+def configure_server() -> Tuple[ServerConfig, FedProx]:
     config = ServerConfig(
         num_rounds=20,
-        round_timeout=600,
+        round_timeout=600
     )
 
     strategy = FedProx(
@@ -64,8 +64,8 @@ def server_fn(context: Context) -> ServerAppComponents:
         evaluate_metrics_aggregation_fn=weighted_average,
         on_fit_config_fn=__on_fit_config_fn,
     )
-    
-    return ServerAppComponents(strategy=strategy, config=config)
+
+    return config, strategy
 
 
 
@@ -74,14 +74,22 @@ def server_fn(context: Context) -> ServerAppComponents:
 # 3. Main Execution (legacy mode)
 # -------------------------
 
-logger = create_logger("server.log")
-logger.info("Starting FL server...")
+if __name__ == "__main__":
+    # Function start_server is deprecated but it is the only current way to use a custom server_ip
+    
+    logger = create_logger("server.log")
+    logger.info("Starting FL server...")
+    
+    server_ip = "192.168.18.12"
+    server_port = "8081"
+    server_address = f"{server_ip}:{server_port}"
+    
+    config, strategy = configure_server()
+    logger.info("Server configuration complete. Listening on %s", server_address)
 
-# server_ip = "192.168.18.12"
-# server_port = "8081"
-# server_address = f"{server_ip}:{server_port}"
-# logger.info("Server configuration complete. Listening on %s", server_address)
-
-logger.info("Server configuration complete.")
-app = ServerApp(server_fn=server_fn)
-logger.info("Closing FL server...")
+    start_server(
+        server_address=server_address,
+        config=config,
+        strategy=strategy,
+    )
+    logger.info("Closing FL server...")
