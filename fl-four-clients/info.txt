@@ -67,6 +67,9 @@ To show if a package is installed:
     pip show <PACKAGE>
 
 
+To install whole requirements.txt (from folder):
+    pip install -r requirements.txt     // if from another folder, /path/to/requirements.txt 
+
 
 
 
