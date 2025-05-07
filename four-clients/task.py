@@ -35,11 +35,11 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     return data_shuffled
 
 
-def plot_loaded_data(data, client_number):
+def plot_loaded_data(data, client_id):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
-    boxplot_path = os.path.join(folder_name, f"data_boxplot_{client_number}.png")
-    corr_matrix_path = os.path.join(folder_name, f"data_corr_matrix_{client_number}.png")
+    boxplot_path = os.path.join(folder_name, f"data_boxplot_{client_id}.png")
+    corr_matrix_path = os.path.join(folder_name, f"data_corr_matrix_{client_id}.png")
     
     # Boxplots
     fig, axes = plt.subplots(3, 1)
@@ -60,11 +60,11 @@ def plot_loaded_data(data, client_number):
     plt.close()
 
 
-def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_number, num_epochs_by_fold, num_rounds, num_cross_val_folds_round):
+def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_id, num_epochs_by_fold, num_rounds, num_cross_val_folds_round):
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
-    accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_number}.png")
-    loss_path = os.path.join(folder_name, f"training_testing_loss_{client_number}.png")
+    accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_id}.png")
+    loss_path = os.path.join(folder_name, f"training_testing_loss_{client_id}.png")
     
     num_epochs = num_rounds * num_cross_val_folds_round * num_epochs_by_fold
     num_epochs_by_round = num_cross_val_folds_round * num_epochs_by_fold
