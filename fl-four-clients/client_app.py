@@ -294,7 +294,7 @@ class FlowerClient(NumPyClient):
 
 
 
-def client_fn(excel_file_name: str, temp_csv_file_name:str, context: Context) -> FlowerClient:
+def client_fn(excel_file_name: str, temp_csv_file_name:str) -> FlowerClient:
     """ It creates an instance of FlowerClient with the configuration given."""
     
     x, y = load_data(excel_file_name, temp_csv_file_name)

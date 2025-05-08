@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import yaml
 from flwr.common import Metrics
-from flwr.server import ServerConfig
+from flwr.server import ServerConfig, start_server
 from flwr.server.strategy import FedProx
 from task import create_logger
 
