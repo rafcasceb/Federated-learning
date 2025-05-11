@@ -21,10 +21,10 @@ class FedProxSaveModel(FedProx):
             self.global_model.load_state_dict(state_dict)
             
             # Save to file
-            folder_name = "server_model_params"
+            folder_name = "aggregated_models"
             os.makedirs(folder_name, exist_ok=True)
-            model_params_path = os.path.join(folder_name, f"model_round_{rnd}.pt")
-            torch.save(self.global_model.state_dict(), model_params_path)
-            # logger.info(f"Saved global model after round {rnd}.")
+            file_path = os.path.join(folder_name, f"model_round_{rnd}.pt")
+            torch.save(self.global_model.state_dict(), file_path)
+            # logger.info(f"Saved aggregated global model after round {rnd}.")
             
         return aggregated_weights, aggregated_metrics

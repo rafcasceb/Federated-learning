@@ -17,5 +17,5 @@ logs/
 # Plots
 plots/
 
-# Server model params
-server_model_params/
+# Aggregated models
+aggregated_models/
