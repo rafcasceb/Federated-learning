@@ -10,28 +10,16 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import torch.optim as optim
 from flwr.client import NumPyClient, start_client
-from flwr.common import Context
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
-from task import create_logger, plot_accuracy_and_loss, plot_loaded_data, preprocess_data
+from task import HyperParameters, create_logger, load_hyperparameters, plot_accuracy_and_loss, plot_loaded_data, preprocess_data
 from torch.utils.data import DataLoader, TensorDataset
 from torchmetrics import MeanMetric
 from torchmetrics.classification import BinaryAccuracy
 
 
-# Hyperparameters
-BATCH_SIZE = 16
-LEARNING_RATE = 0.0001
-HIDDEN_SIZES = [128, 128]
-BINARIZATION_THRESHOLD = 0.4
-NUM_EPOCHS = 50
-TEST_SIZE = 0.2
-DROPOUT = 0.1
-NUM_CROSS_VAL_FOLDS_ROUND = 5
-
-NUM_ROUNDS = 20  # ¡¡PROVIENE DEL SERVICIO, ARREGLAR!!
 
 # Random seeds set for testing reproducibility
 np.random.seed(55)
@@ -42,6 +30,7 @@ SHUFFLE_LOADERS = False
 # Others
 logger = None
 CLIENT_ID = None
+CONFIGURATION_FILE = "config.yaml"
 general_epoch_train_acc = []
 general_epoch_train_loss = []
 general_round_test_acc = []
@@ -100,7 +89,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
 
 class NeuralNetwork(nn.Module):
 
-    def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int) -> None:
+    def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int, dropout) -> None:
         super(NeuralNetwork, self).__init__()
         
         layers = []
@@ -109,7 +98,7 @@ class NeuralNetwork(nn.Module):
         init.kaiming_uniform_(layers[-1].weight, nonlinearity='relu')
         layers.append(nn.BatchNorm1d(hidden_sizes[0]))  
         layers.append(nn.ReLU())
-        layers.append(nn.Dropout(DROPOUT))  
+        layers.append(nn.Dropout(dropout))  
 
         for in_size, out_size in zip(hidden_sizes[:-1], hidden_sizes[1:]):
             layers.append(nn.Linear(in_size, out_size))
@@ -135,24 +124,24 @@ class NeuralNetwork(nn.Module):
 # 3. Training and Evaluation
 # -------------------------
 
-def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, epochs: int =48):
-    kfold = KFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters):
+    kfold = KFold(n_splits=hyperparams.num_cross_val_folds_round, shuffle=True, random_state=RANDOM_STATE)
     folds_train_losses = []
     folds_train_accuracies = []
 
     for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(x)):
-        logger.info(f"Training fold {fold_idx+1}/5...")
+        logger.info(f"Training fold {fold_idx+1}/{hyperparams.num_cross_val_folds_round}...")
         
         x_train_fold, y_train_fold = x[train_idx], y[train_idx]
         x_test_fold, y_test_fold = x[test_idx], y[test_idx]
         train_dataset = TensorDataset(x_train_fold, y_train_fold)
         test_dataset = TensorDataset(x_test_fold, y_test_fold)
-        trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_LOADERS)
-        testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_LOADERS)
+        trainloader = DataLoader(train_dataset, batch_size=hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
+        testloader = DataLoader(test_dataset, batch_size=hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
 
-        train(model, trainloader, epochs=NUM_EPOCHS)
+        train(model, trainloader, hyperparams)
         
-        test_loss, test_metrics = test(model, testloader)
+        test_loss, test_metrics = test(model, hyperparams, testloader)
         folds_train_losses.append(test_loss)
         folds_train_accuracies.append(test_metrics.get("Accuracy"))
     
@@ -161,16 +150,16 @@ def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, e
     logger.info(f"Cross-Validation -- Avg Loss: {avg_loss_all_folders:.4f}, Avg Accuracy: {avg_acc_all_folders:.4f}")
     
 
-def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
+def train(model: nn.Module, train_data: DataLoader, hyperparams: HyperParameters) -> None:
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=hyperparams.learning_rate)
     accuracy_metric = BinaryAccuracy()
     loss_metric = MeanMetric()
     
-    logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS)
-    logger.info("Starting training for %d epochs...", epochs)
+    logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", hyperparams.learning_rate, hyperparams.batch_size, hyperparams.num_epochs)
+    logger.info("Starting training for %d epochs...", hyperparams.num_epochs)
     
-    for epoch in range(epochs):
+    for epoch in range(hyperparams.num_epochs):
         model.train()  # Set to training mode
         accuracy_metric.reset()
         loss_metric.reset()
@@ -187,7 +176,7 @@ def train(model: nn.Module, train_data: DataLoader, epochs: int =48) -> None:
         
         epoch_accuracy = accuracy_metric.compute().item()
         epoch_loss = loss_metric.compute().item()
-        logger.info("Epoch %d/%d -- Loss: %.4f, Accuracy: %.4f", epoch+1, epochs, epoch_loss, epoch_accuracy)
+        logger.info("Epoch %d/%d -- Loss: %.4f, Accuracy: %.4f", epoch+1, hyperparams.num_epochs, epoch_loss, epoch_accuracy)
     
         general_epoch_train_acc.append(epoch_accuracy)
         general_epoch_train_loss.append(epoch_loss)
@@ -214,13 +203,13 @@ def __calculate_average_test_metrics(all_labels: List[int], all_predictions: Lis
     return metrics 
 
 
-def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
+def test(model: nn.Module, hyperparams: HyperParameters, test_data: DataLoader) -> Tuple[float, Dict[str,float]]:
     model.eval()  # Set to evaluation mode
     loss_metric = MeanMetric()
     all_labels = []
     all_predictions = []
     
-    logger.info("Using threshold %.2f for binarization", BINARIZATION_THRESHOLD)
+    logger.info("Using threshold %.2f for binarization", hyperparams.binarization_threshold)
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
@@ -229,7 +218,7 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
             # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
             print("Raw outputs:", outputs)
-            predictions = (outputs > BINARIZATION_THRESHOLD).float()  # Binarize predictions
+            predictions = (outputs > hyperparams.binarization_threshold).float()  # Binarize predictions
             print("Binary outputs (predictions):", predictions)
             predictions = torch.nan_to_num(predictions, nan=0)
             
@@ -258,10 +247,11 @@ def test(model: nn.Module, test_data: DataLoader) -> Tuple[float, Dict[str,float
 
 class FlowerClient(NumPyClient):
     
-    def __init__(self, net: nn.Module, x: torch.Tensor, y: torch.Tensor) -> None:
+    def __init__(self, net: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters) -> None:
         self.net = net
         self.x = x
         self.y = y
+        self.hyperparams = hyperparams
         logger.info("Client initialized.")
     
     def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
@@ -278,7 +268,7 @@ class FlowerClient(NumPyClient):
         logger.info(""); logger.info("=== [NEW TRAINING ROUND] ===")
         logger.info("Starting local training...")
         self.set_parameters(parameters)
-        train_cross_validation(self.net, self.x, self.y, epochs=NUM_EPOCHS)
+        train_cross_validation(self.net, self.x, self.y, self.hyperparams)
         logger.info("Local training complete.")
         return self.get_parameters(config={}), len(self.x), {}
 
@@ -287,23 +277,21 @@ class FlowerClient(NumPyClient):
         logger.info("Starting local model evaluation...")
         self.set_parameters(parameters)
         whole_dataset = TensorDataset(self.x, self.y)
-        whole_dataloader = DataLoader(whole_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_LOADERS)
-        loss, metrics = test(self.net, whole_dataloader)
+        whole_dataloader = DataLoader(whole_dataset, batch_size=self.hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
+        loss, metrics = test(self.net, self.hyperparams, whole_dataloader)
         num_examples = len(self.x)
         return loss, num_examples, metrics
 
 
 
-def client_fn(excel_file_name: str, temp_csv_file_name:str) -> FlowerClient:
-    """ It creates an instance of FlowerClient with the configuration given."""
-    
+def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperParameters) -> FlowerClient:    
     x, y = load_data(excel_file_name, temp_csv_file_name)
 
     input_size = x.shape[1]
     output_size = 1
-    net = NeuralNetwork(input_size, HIDDEN_SIZES, output_size)
+    net = NeuralNetwork(input_size, hyperparams.hidden_sizes, output_size, hyperparams.dropout)
     
-    return FlowerClient(net, x, y).to_client()
+    return FlowerClient(net, x, y, hyperparams).to_client()
 
 
 
@@ -312,27 +300,34 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str) -> FlowerClient:
 # 5. Main Execution (legacy mode)
 # -------------------------
 
-def start_flower_client(client_id: int):  
-    excel_file_name = f"PI-CAI_3__part{client_id}.xlsx" 
-    temp_csv_file_name = f"temp_database_{client_id}.csv"
-    logger_name = f"client{client_id}.log"
-    
-    global logger
-    logger = create_logger(logger_name)
+def start_flower_client(client_id: int):
     global CLIENT_ID
     CLIENT_ID = client_id
     
+    excel_file_name = f"PI-CAI_3__part{CLIENT_ID}.xlsx" 
+    temp_csv_file_name = f"temp_database_{CLIENT_ID}.csv"
+    logger_name = f"client{CLIENT_ID}.log"
+    
+    global logger
+    logger = create_logger(logger_name)
+    logger.info("Starting FL client...")
+    
+    try:
+        hyperparams = load_hyperparameters(CONFIGURATION_FILE)
+    except Exception as e:
+        logger.error(f"Failed to load hyperparameters: {str(e)}")
+        return
+    
     server_ip = "192.168.18.12"
     server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"  
+    server_address = f"{server_ip}:{server_port}"
     
-    logger.info("Starting FL client...")
     start_client(
         server_address=server_address,
-        client=client_fn(excel_file_name, temp_csv_file_name),
+        client=client_fn(excel_file_name, temp_csv_file_name, hyperparams),
     )
     
     plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
                            general_round_test_acc, general_round_test_loss,
-                           CLIENT_ID, NUM_EPOCHS, NUM_ROUNDS, NUM_CROSS_VAL_FOLDS_ROUND)
+                           CLIENT_ID, hyperparams.num_epochs, hyperparams.num_rounds, hyperparams.num_cross_val_folds_round)
     logger.info("Closing FL client...")

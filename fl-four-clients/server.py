@@ -1,10 +1,11 @@
 from typing import List, Tuple
 
-import yaml
 from flwr.common import Metrics
 from flwr.server import ServerConfig, start_server
 from flwr.server.strategy import FedProx
-from task import create_logger
+from task import create_logger, load_hyperparameters
+
+
 
 METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
 
@@ -42,11 +43,6 @@ def __on_fit_config_fn(server_round: int):
     logger.info(f"[ROUND {server_round}]")
     return {}
 
-def read_from_yaml(file_name: str):
-    with open(file_name, "r") as file:
-        run_config = yaml.safe_load(file)
-        return run_config
-
 
 def configure_server() -> Tuple[ServerConfig, FedProx]:
     config = ServerConfig(
@@ -83,6 +79,9 @@ if __name__ == "__main__":
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
+    
+    configuration_file = "config.yaml"
+    hyperparams = load_hyperparameters(configuration_file)
     
     config, strategy = configure_server()
     logger.info("Server configuration complete. Listening on %s", server_address)

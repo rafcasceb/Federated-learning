@@ -1,13 +1,21 @@
 import logging
 import os
+from dataclasses import dataclass
 from logging import Logger
 from logging.handlers import RotatingFileHandler
+from typing import List
 
-import pandas as pd
-from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
+import yaml
+from sklearn.utils import shuffle
 
+
+
+# -------------------------
+# Preprocessing data
+# -------------------------
 
 def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     data = data.drop(columns=["study_id"])
@@ -34,6 +42,12 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     
     return data_shuffled
 
+
+
+
+# -------------------------
+# Plotting
+# -------------------------
 
 def plot_loaded_data(data, client_id):
     folder_name = "plots"
@@ -104,6 +118,12 @@ def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_id
     plt.close()
 
 
+
+
+# -------------------------
+# Logger
+# -------------------------
+
 def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
     """It creates a logger for either the server or a client."""
     
@@ -131,3 +151,27 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
          
     return logger
 
+
+
+
+# -------------------------
+# Hyperparameters
+# -------------------------
+
+@dataclass
+class HyperParameters:
+    batch_size: int
+    dropout: float
+    hidden_sizes: List[int]
+    num_rounds: int
+    num_cross_val_folds_round: int
+    num_epochs: int
+    test_size: float
+    learning_rate: float
+    binarization_threshold: float
+    
+
+def load_hyperparameters(file_name: str) -> HyperParameters:
+    with open(file_name, "r") as file:
+        data = yaml.safe_load(file)
+        return HyperParameters(**data)
