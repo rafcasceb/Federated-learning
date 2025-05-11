@@ -89,23 +89,25 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
 # -------------------------
 
 def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters):
-    kfold = KFold(n_splits=hyperparams.num_cross_val_folds_round, shuffle=True, random_state=RANDOM_STATE)
+    hp = hyperparams
+    
+    kfold = KFold(n_splits=hp.num_cross_val_folds_round, shuffle=True, random_state=RANDOM_STATE)
     folds_train_losses = []
     folds_train_accuracies = []
 
     for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(x)):
-        logger.info(f"Training fold {fold_idx+1}/{hyperparams.num_cross_val_folds_round}...")
+        logger.info(f"Training fold {fold_idx+1}/{hp.num_cross_val_folds_round}...")
         
         x_train_fold, y_train_fold = x[train_idx], y[train_idx]
         x_test_fold, y_test_fold = x[test_idx], y[test_idx]
         train_dataset = TensorDataset(x_train_fold, y_train_fold)
         test_dataset = TensorDataset(x_test_fold, y_test_fold)
-        trainloader = DataLoader(train_dataset, batch_size=hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
-        testloader = DataLoader(test_dataset, batch_size=hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
+        trainloader = DataLoader(train_dataset, batch_size=hp.batch_size, shuffle=SHUFFLE_LOADERS)
+        testloader = DataLoader(test_dataset, batch_size=hp.batch_size, shuffle=SHUFFLE_LOADERS)
 
-        train(model, trainloader, hyperparams)
+        train(model, trainloader, hp)
         
-        test_loss, test_metrics = test(model, hyperparams, testloader)
+        test_loss, test_metrics = test(model, hp, testloader)
         folds_train_losses.append(test_loss)
         folds_train_accuracies.append(test_metrics.get("Accuracy"))
     
@@ -115,15 +117,17 @@ def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, h
     
 
 def train(model: nn.Module, train_data: DataLoader, hyperparams: HyperParameters) -> None:
+    hp = hyperparams
+    
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
-    optimizer = optim.Adam(model.parameters(), lr=hyperparams.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=hp.learning_rate)
     accuracy_metric = BinaryAccuracy()
     loss_metric = MeanMetric()
     
-    logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", hyperparams.learning_rate, hyperparams.batch_size, hyperparams.num_epochs)
-    logger.info("Starting training for %d epochs...", hyperparams.num_epochs)
+    logger.info("Hyperparameters - LR: %f, Batch Size: %d, Epochs: %d", hp.learning_rate, hp.batch_size, hp.num_epochs)
+    logger.info("Starting training for %d epochs...", hp.num_epochs)
     
-    for epoch in range(hyperparams.num_epochs):
+    for epoch in range(hp.num_epochs):
         model.train()  # Set to training mode
         accuracy_metric.reset()
         loss_metric.reset()
@@ -140,7 +144,7 @@ def train(model: nn.Module, train_data: DataLoader, hyperparams: HyperParameters
         
         epoch_accuracy = accuracy_metric.compute().item()
         epoch_loss = loss_metric.compute().item()
-        logger.info("Epoch %d/%d -- Loss: %.4f, Accuracy: %.4f", epoch+1, hyperparams.num_epochs, epoch_loss, epoch_accuracy)
+        logger.info("Epoch %d/%d -- Loss: %.4f, Accuracy: %.4f", epoch+1, hp.num_epochs, epoch_loss, epoch_accuracy)
     
         general_epoch_train_acc.append(epoch_accuracy)
         general_epoch_train_loss.append(epoch_loss)
@@ -154,12 +158,14 @@ def __calculate_average_test_metrics(all_labels: List[int], all_predictions: Lis
     balanced_acc = balanced_accuracy_score(all_labels, all_predictions)           # accuracy for imbalanced DS (the lower than accuracy, the more imbalanced)
     mcc = matthews_corrcoef(all_labels, all_predictions)                          # randomness of predictions for imbalanced DS (-1=wrong, 0=random, 1=perfect)
     
-    metrics = {"Accuracy": accuracy,
-               "Precision": precision,
-               "Recall": recall,
-               "F1 score": f1,
-               "Balanced accuracy": balanced_acc,
-               "MCC": mcc}
+    metrics = {
+        "Accuracy": accuracy,
+        "Precision": precision,
+        "Recall": recall,
+        "F1 score": f1,
+        "Balanced accuracy": balanced_acc,
+        "MCC": mcc
+    }
     
     logger.info("Testing metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
                 accuracy, precision, recall, f1, balanced_acc, mcc)
@@ -248,19 +254,22 @@ class FlowerClient(NumPyClient):
 
 
 
-def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperParameters) -> FlowerClient:    
+def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperParameters) -> FlowerClient:
+    hp = hyperparams
+    
     x, y = load_data(excel_file_name, temp_csv_file_name)
 
-    if x.shape[1] != hyperparams.input_size:
-        logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hyperparams.input_size}.")
+    if x.shape[1] != hp.input_size:
+        logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hp.input_size}.")
 
     model = NeuralNetwork(
-        input_size=hyperparams.input_size,
-        hidden_sizes=hyperparams.hidden_sizes,
-        output_size=hyperparams.output_size,
-        dropout=hyperparams.dropout)
+        input_size = hp.input_size,
+        hidden_sizes = hp.hidden_sizes,
+        output_size = hp.output_size,
+        dropout = hp.dropout
+    )
     
-    return FlowerClient(model, x, y, hyperparams).to_client()
+    return FlowerClient(model, x, y, hp).to_client()
 
 
 
@@ -282,7 +291,7 @@ def start_flower_client(client_id: int):
     logger.info("Starting FL client...")
     
     try:
-        hyperparams = load_hyperparameters(CONFIGURATION_FILE)
+        hp = load_hyperparameters(CONFIGURATION_FILE)
     except Exception as e:
         logger.error(f"Failed to load hyperparameters: {str(e)}")
         return
@@ -293,10 +302,12 @@ def start_flower_client(client_id: int):
     
     start_client(
         server_address=server_address,
-        client=client_fn(excel_file_name, temp_csv_file_name, hyperparams),
+        client=client_fn(excel_file_name, temp_csv_file_name, hp),
     )
     
-    plot_accuracy_and_loss(general_epoch_train_acc, general_epoch_train_loss,
-                           general_round_test_acc, general_round_test_loss,
-                           CLIENT_ID, hyperparams.num_epochs, hyperparams.num_rounds, hyperparams.num_cross_val_folds_round)
+    plot_accuracy_and_loss(
+        general_epoch_train_acc, general_epoch_train_loss,
+        general_round_test_acc, general_round_test_loss,
+        CLIENT_ID, hp.num_epochs, hp.num_rounds, hp.num_cross_val_folds_round
+    )
     logger.info("Closing FL client...")

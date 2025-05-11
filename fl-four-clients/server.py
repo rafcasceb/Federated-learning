@@ -4,10 +4,9 @@ from typing import List, Tuple
 import torch
 from flwr.common import Metrics
 from flwr.server import ServerConfig, start_server
-from flwr.server.strategy import FedProx
-from strategy import FedProxSaveModel
-from task import create_logger, load_hyperparameters, HyperParameters
 from model import NeuralNetwork
+from strategy import FedProxSaveModel
+from task import HyperParameters, create_logger, load_hyperparameters
 
 
 
@@ -51,10 +50,10 @@ def __on_fit_config_fn(server_round: int):
 def __initialize_model(hyperparams: HyperParameters):
     # Initialize the same model architecture
     model = NeuralNetwork(
-        input_size=hyperparams.input_size,
-        hidden_sizes=hyperparams.hidden_sizes,
-        output_size=hyperparams.output_size,
-        dropout=hyperparams.dropout)
+        input_size = hyperparams.input_size,
+        hidden_sizes = hyperparams.hidden_sizes,
+        output_size = hyperparams.output_size,
+        dropout = hyperparams.dropout)
 
     # Load the weights from the last training round
     checkpoint_path = "model_round_20.pt"  #! TODO: don't call 20 manually

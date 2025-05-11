@@ -1,7 +1,9 @@
 import os
+
 import torch
 from flwr.common import parameters_to_ndarrays
 from flwr.server.strategy import FedProx
+
 
 
 class FedProxSaveModel(FedProx):

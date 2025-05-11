@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.init as init
 
 
+
 class NeuralNetwork(nn.Module):
 
     def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int, dropout) -> None:
