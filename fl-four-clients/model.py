@@ -29,8 +29,8 @@ class NeuralNetwork(nn.Module):
         layers.append(nn.Linear(hidden_sizes[-1], output_size))
         init.xavier_uniform_(layers[-1].weight)
 
-        self.net = nn.Sequential(*layers)
+        self.model = nn.Sequential(*layers)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+        return self.model(x)

@@ -211,8 +211,8 @@ def test(model: nn.Module, hyperparams: HyperParameters, test_data: DataLoader) 
 
 class FlowerClient(NumPyClient):
     
-    def __init__(self, net: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters) -> None:
-        self.net = net
+    def __init__(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters) -> None:
+        self.model = model
         self.x = x
         self.y = y
         self.hyperparams = hyperparams
@@ -220,19 +220,19 @@ class FlowerClient(NumPyClient):
     
     def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
         logger.info("Fetching model parameters...")
-        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters: list[np.ndarray]) -> None:
         logger.info("Updating model parameters...")
-        params_dict = zip(self.net.state_dict().keys(), parameters)
+        params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        self.net.load_state_dict(state_dict)
+        self.model.load_state_dict(state_dict)
 
     def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
         logger.info(""); logger.info("=== [NEW TRAINING ROUND] ===")
         logger.info("Starting local training...")
         self.set_parameters(parameters)
-        train_cross_validation(self.net, self.x, self.y, self.hyperparams)
+        train_cross_validation(self.model, self.x, self.y, self.hyperparams)
         logger.info("Local training complete.")
         return self.get_parameters(config={}), len(self.x), {}
 
@@ -242,7 +242,7 @@ class FlowerClient(NumPyClient):
         self.set_parameters(parameters)
         whole_dataset = TensorDataset(self.x, self.y)
         whole_dataloader = DataLoader(whole_dataset, batch_size=self.hyperparams.batch_size, shuffle=SHUFFLE_LOADERS)
-        loss, metrics = test(self.net, self.hyperparams, whole_dataloader)
+        loss, metrics = test(self.model, self.hyperparams, whole_dataloader)
         num_examples = len(self.x)
         return loss, num_examples, metrics
 
@@ -254,13 +254,13 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperPa
     if x.shape[1] != hyperparams.input_size:
         logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hyperparams.input_size}.")
 
-    net = NeuralNetwork(
+    model = NeuralNetwork(
         input_size=hyperparams.input_size,
         hidden_sizes=hyperparams.hidden_sizes,
         output_size=hyperparams.output_size,
         dropout=hyperparams.dropout)
     
-    return FlowerClient(net, x, y, hyperparams).to_client()
+    return FlowerClient(model, x, y, hyperparams).to_client()
 
 
 
