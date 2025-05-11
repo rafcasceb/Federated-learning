@@ -7,14 +7,15 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.nn.init as init
 import torch.optim as optim
 from flwr.client import NumPyClient, start_client
+from model import NeuralNetwork
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
-from task import HyperParameters, create_logger, load_hyperparameters, plot_accuracy_and_loss, plot_loaded_data, preprocess_data
+from task import (HyperParameters, create_logger, load_hyperparameters,
+                  plot_accuracy_and_loss, plot_loaded_data, preprocess_data)
 from torch.utils.data import DataLoader, TensorDataset
 from torchmetrics import MeanMetric
 from torchmetrics.classification import BinaryAccuracy
@@ -84,44 +85,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str) -> Tuple[torch.Tenso
 
 
 # -------------------------
-# 2. Neural Network Model Definition
-# -------------------------
-
-class NeuralNetwork(nn.Module):
-
-    def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int, dropout) -> None:
-        super(NeuralNetwork, self).__init__()
-        
-        layers = []
-        layers.append(nn.Linear(input_size, hidden_sizes[0]))
-        
-        init.kaiming_uniform_(layers[-1].weight, nonlinearity='relu')
-        layers.append(nn.BatchNorm1d(hidden_sizes[0]))  
-        layers.append(nn.ReLU())
-        layers.append(nn.Dropout(dropout))  
-
-        for in_size, out_size in zip(hidden_sizes[:-1], hidden_sizes[1:]):
-            layers.append(nn.Linear(in_size, out_size))
-            
-            init.kaiming_uniform_(layers[-1].weight, nonlinearity='relu')
-            #init.xavier_uniform_(layers[-1].weight)
-            layers.append(nn.BatchNorm1d(out_size))
-            #layers.append(nn.LeakyReLU())
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(0.1))
-
-        layers.append(nn.Linear(hidden_sizes[-1], output_size))
-        init.xavier_uniform_(layers[-1].weight)
-
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
-
-
-
-# -------------------------
-# 3. Training and Evaluation
+# 2. Training and Evaluation
 # -------------------------
 
 def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, hyperparams: HyperParameters):
@@ -213,7 +177,7 @@ def test(model: nn.Module, hyperparams: HyperParameters, test_data: DataLoader) 
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
-            ##! TODO: Assert no NaN in inputs and labels?
+            #! TODO: Assert no NaN in inputs and labels?
             
             # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
@@ -242,7 +206,7 @@ def test(model: nn.Module, hyperparams: HyperParameters, test_data: DataLoader) 
 
 
 # -------------------------
-# 4. Federated Learning Client
+# 3. Federated Learning Client
 # -------------------------
 
 class FlowerClient(NumPyClient):
@@ -287,9 +251,14 @@ class FlowerClient(NumPyClient):
 def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperParameters) -> FlowerClient:    
     x, y = load_data(excel_file_name, temp_csv_file_name)
 
-    input_size = x.shape[1]
-    output_size = 1
-    net = NeuralNetwork(input_size, hyperparams.hidden_sizes, output_size, hyperparams.dropout)
+    if x.shape[1] != hyperparams.input_size:
+        logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hyperparams.input_size}.")
+
+    net = NeuralNetwork(
+        input_size=hyperparams.input_size,
+        hidden_sizes=hyperparams.hidden_sizes,
+        output_size=hyperparams.output_size,
+        dropout=hyperparams.dropout)
     
     return FlowerClient(net, x, y, hyperparams).to_client()
 
@@ -297,7 +266,7 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, hyperparams: HyperPa
 
 
 # -------------------------
-# 5. Main Execution (legacy mode)
+# 4. Main Execution (legacy mode)
 # -------------------------
 
 def start_flower_client(client_id: int):

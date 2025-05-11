@@ -16,3 +16,6 @@ logs/
 
 # Plots
 plots/
+
+# Server model params
+server_model_params/

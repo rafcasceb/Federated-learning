@@ -1,12 +1,14 @@
 # Neural network
 batch_size: 16
 dropout: 0.1
+input_size: 3
 hidden_sizes: [128, 128]
+output_size: 1
 
 # Learning
-num_rounds: 20
-num_cross_val_folds_round: 5
-num_epochs: 50
+num_rounds: 20 #10
+num_cross_val_folds_round: 5 #3
+num_epochs: 50 #20
 test_size: 0.2
 learning_rate: 0.0001
 binarization_threshold: 0.4

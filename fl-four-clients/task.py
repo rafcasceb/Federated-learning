@@ -162,7 +162,9 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
 class HyperParameters:
     batch_size: int
     dropout: float
+    input_size: int
     hidden_sizes: List[int]
+    output_size: int
     num_rounds: int
     num_cross_val_folds_round: int
     num_epochs: int

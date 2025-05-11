@@ -1,9 +1,13 @@
+import os
 from typing import List, Tuple
 
+import torch
 from flwr.common import Metrics
 from flwr.server import ServerConfig, start_server
 from flwr.server.strategy import FedProx
-from task import create_logger, load_hyperparameters
+from strategy import FedProxSaveModel
+from task import create_logger, load_hyperparameters, HyperParameters
+from model import NeuralNetwork
 
 
 
@@ -44,13 +48,35 @@ def __on_fit_config_fn(server_round: int):
     return {}
 
 
-def configure_server() -> Tuple[ServerConfig, FedProx]:
+def __initialize_model(hyperparams: HyperParameters):
+    # Initialize the same model architecture
+    model = NeuralNetwork(
+        input_size=hyperparams.input_size,
+        hidden_sizes=hyperparams.hidden_sizes,
+        output_size=hyperparams.output_size,
+        dropout=hyperparams.dropout)
+
+    # Load the weights from the last training round
+    checkpoint_path = "model_round_20.pt"  #! TODO: don't call 20 manually
+    if os.path.exists(checkpoint_path):
+        model.load_state_dict(torch.load(checkpoint_path))
+        logger.info(f"Loaded global model from checkpoint: {checkpoint_path}")
+    else:
+        logger.warning(f"No checkpoint found at {checkpoint_path}. Starting fresh.")
+        
+    return model
+
+
+def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedProxSaveModel]:
     config = ServerConfig(
         num_rounds=20,
         round_timeout=600
     )
+    
+    model = __initialize_model(hyperparams)
 
-    strategy = FedProx(
+    strategy = FedProxSaveModel(
+        model=model,
         fraction_fit=1.0,  # fraction of clients that will be sampled per round
         fraction_evaluate=1.0,  # fraction of clients sampled for evaluation
         min_fit_clients=2,  # minimum of clients in a training round
@@ -83,7 +109,7 @@ if __name__ == "__main__":
     configuration_file = "config.yaml"
     hyperparams = load_hyperparameters(configuration_file)
     
-    config, strategy = configure_server()
+    config, strategy = configure_server(hyperparams)
     logger.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
