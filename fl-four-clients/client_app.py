@@ -308,6 +308,6 @@ def start_flower_client(client_id: int):
     plot_accuracy_and_loss(
         general_epoch_train_acc, general_epoch_train_loss,
         general_round_test_acc, general_round_test_loss,
-        CLIENT_ID, hp.num_epochs, hp.num_rounds, hp.num_cross_val_folds_round
+        CLIENT_ID, hp
     )
     logger.info("Closing FL client...")

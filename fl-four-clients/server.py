@@ -11,6 +11,7 @@ from task import HyperParameters, create_logger, load_hyperparameters
 
 
 METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
+CONFIGURATION_FILE = "config.yaml"
 
 
 
@@ -68,7 +69,7 @@ def __initialize_model(hyperparams: HyperParameters):
 
 def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedProxSaveModel]:
     config = ServerConfig(
-        num_rounds=20,
+        num_rounds=hyperparams.num_rounds,
         round_timeout=600
     )
     
@@ -105,8 +106,7 @@ if __name__ == "__main__":
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
     
-    configuration_file = "config.yaml"
-    hyperparams = load_hyperparameters(configuration_file)
+    hyperparams = load_hyperparameters(CONFIGURATION_FILE)
     
     config, strategy = configure_server(hyperparams)
     logger.info("Server configuration complete. Listening on %s", server_address)

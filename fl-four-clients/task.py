@@ -46,6 +46,33 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
 
 
 # -------------------------
+# Hyperparameters
+# -------------------------
+
+@dataclass
+class HyperParameters:
+    batch_size: int
+    dropout: float
+    input_size: int
+    hidden_sizes: List[int]
+    output_size: int
+    num_rounds: int
+    num_cross_val_folds_round: int
+    num_epochs: int
+    test_size: float
+    learning_rate: float
+    binarization_threshold: float
+    
+
+def load_hyperparameters(file_name: str) -> HyperParameters:
+    with open(file_name, "r") as file:
+        data = yaml.safe_load(file)
+        return HyperParameters(**data)
+
+
+
+
+# -------------------------
 # Plotting
 # -------------------------
 
@@ -74,25 +101,47 @@ def plot_loaded_data(data, client_id):
     plt.close()
 
 
-def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_id, num_epochs_by_fold, num_rounds, num_cross_val_folds_round):
+def plot_accuracy_and_loss(train_acc: list[int], train_loss: list[int], test_acc: list[int], test_loss: list[int],
+                           client_id: int, hyperparams: HyperParameters):
+    num_rounds = hyperparams.num_rounds
+    num_cross_val_folds_round = hyperparams.num_cross_val_folds_round
+    num_epochs_by_fold = hyperparams.num_epochs
+    
     folder_name = "plots"
     os.makedirs(folder_name, exist_ok=True)
     accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_id}.png")
     loss_path = os.path.join(folder_name, f"training_testing_loss_{client_id}.png")
-    
-    num_epochs = num_rounds * num_cross_val_folds_round * num_epochs_by_fold
+
     num_epochs_by_round = num_cross_val_folds_round * num_epochs_by_fold
-    
+    num_epochs = num_rounds * num_epochs_by_round
+
     range_num_rounds = range(1, num_rounds +1)
     range_num_epochs = range(1, num_epochs +1)
     range_test_epochs = range(num_epochs_by_fold, num_epochs +1, num_epochs_by_fold)  # test_epochs = [fold * num_epochs_by_fold for fold in range_num_cross_val_folds]  
     range_end_round_epochs = range(num_epochs_by_round, num_epochs +1, num_epochs_by_round)
+
+    # Keep only final test validation per round; test done at the end of each round  
     
-    # Keep only final test validation per round
-    for i in range_num_rounds:
-        test_acc.pop(i*num_cross_val_folds_round)
-        test_loss.pop(i*num_cross_val_folds_round) 
+    b = list(range(1, 31))
+    result = []
+    n = 93
+    for i in range(0, len(b), 3):
+        result.extend(b[i:i+3])
+        result.append(n)
+        n += 3
     
+    for r in range_num_rounds:
+        print(list(range_end_round_epochs))
+        print(len(test_acc))
+        print(len(test_loss))
+        test_acc.pop(r*num_cross_val_folds_round -1)
+        test_loss.pop(r*num_cross_val_folds_round -1)
+        result.pop(r*num_cross_val_folds_round -1)
+        print(result)
+        print(len(result))
+        print()
+        
+
     plt.plot(range_num_epochs, train_acc, label="Training accuracy (by epochs)")
     plt.plot(range_test_epochs, test_acc, label="Testing accuracy (by rounds)", marker="o")
     plt.title("TRAINING VS TESTING ACCURACY")
@@ -104,7 +153,7 @@ def plot_accuracy_and_loss(train_acc, train_loss, test_acc, test_loss, client_id
     plt.tight_layout()
     plt.savefig(accuracies_path)
     plt.close()
-    
+
     plt.plot(range_num_epochs, train_loss, label="Training loss (by epochs)")
     plt.plot(range_test_epochs, test_loss, label="Testing loss (by rounds)", marker="o")
     plt.title("TRAINING VS TESTING LOSS")
@@ -150,30 +199,3 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
     logger.addHandler(handler)
          
     return logger
-
-
-
-
-# -------------------------
-# Hyperparameters
-# -------------------------
-
-@dataclass
-class HyperParameters:
-    batch_size: int
-    dropout: float
-    input_size: int
-    hidden_sizes: List[int]
-    output_size: int
-    num_rounds: int
-    num_cross_val_folds_round: int
-    num_epochs: int
-    test_size: float
-    learning_rate: float
-    binarization_threshold: float
-    
-
-def load_hyperparameters(file_name: str) -> HyperParameters:
-    with open(file_name, "r") as file:
-        data = yaml.safe_load(file)
-        return HyperParameters(**data)
