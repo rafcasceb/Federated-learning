@@ -120,26 +120,10 @@ def plot_accuracy_and_loss(train_acc: list[int], train_loss: list[int], test_acc
     range_test_epochs = range(num_epochs_by_fold, num_epochs +1, num_epochs_by_fold)  # test_epochs = [fold * num_epochs_by_fold for fold in range_num_cross_val_folds]  
     range_end_round_epochs = range(num_epochs_by_round, num_epochs +1, num_epochs_by_round)
 
-    # Keep only final test validation per round; test done at the end of each round  
-    
-    b = list(range(1, 31))
-    result = []
-    n = 93
-    for i in range(0, len(b), 3):
-        result.extend(b[i:i+3])
-        result.append(n)
-        n += 3
-    
+    # At the end of each round, an additional test is done; delete previous one and keep that one (to have only one per epoch)      
     for r in range_num_rounds:
-        print(list(range_end_round_epochs))
-        print(len(test_acc))
-        print(len(test_loss))
         test_acc.pop(r*num_cross_val_folds_round -1)
         test_loss.pop(r*num_cross_val_folds_round -1)
-        result.pop(r*num_cross_val_folds_round -1)
-        print(result)
-        print(len(result))
-        print()
         
 
     plt.plot(range_num_epochs, train_acc, label="Training accuracy (by epochs)")
