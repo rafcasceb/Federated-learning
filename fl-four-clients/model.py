@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 import torch.nn as nn
 import torch.nn.init as init
@@ -6,7 +8,7 @@ import torch.nn.init as init
 
 class NeuralNetwork(nn.Module):
 
-    def __init__(self, input_size: int, hidden_sizes: list[int], output_size: int, dropout) -> None:
+    def __init__(self, input_size: int, hidden_sizes: List[int], output_size: int, dropout) -> None:
         super(NeuralNetwork, self).__init__()
         
         layers = []

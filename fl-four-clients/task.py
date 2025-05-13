@@ -99,9 +99,31 @@ def plot_loaded_data(data, client_id):
     plt.tight_layout()
     plt.savefig(corr_matrix_path)
     plt.close()
+      
+    
+def __plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
+                                       metric_name:str, range_end_round_epochs, save_file_path: str):
+    
+    train_label = f"Training {metric_name.lower()} (by epochs)"
+    test_label = f"Testing {metric_name.lower()} (by rounds)"
+    title = f"TRAINING VS TESTING {metric_name.upper()}"
+    x_label = "Epochs"
+    y_label = f"Training vs Testing {metric_name.lower()}"
+    
+    plt.plot(train_x, train_y, label=train_label)
+    plt.plot(test_x, test_y, label=test_label, marker="o")
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+    for epoch in range_end_round_epochs:
+        plt.axvline(x=epoch, color="gray", linestyle="--", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_file_path)
+    plt.close()
 
 
-def plot_accuracy_and_loss(train_acc: list[int], train_loss: list[int], test_acc: list[int], test_loss: list[int],
+def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc: List[int], test_loss: List[int],
                            client_id: int, hyperparams: HyperParameters):
     num_rounds = hyperparams.num_rounds
     num_cross_val_folds_round = hyperparams.num_cross_val_folds_round
@@ -125,30 +147,15 @@ def plot_accuracy_and_loss(train_acc: list[int], train_loss: list[int], test_acc
         test_acc.pop(r*num_cross_val_folds_round -1)
         test_loss.pop(r*num_cross_val_folds_round -1)
         
-
-    plt.plot(range_num_epochs, train_acc, label="Training accuracy (by epochs)")
-    plt.plot(range_test_epochs, test_acc, label="Testing accuracy (by rounds)", marker="o")
-    plt.title("TRAINING VS TESTING ACCURACY")
-    plt.xlabel("Epochs")
-    plt.ylabel("Training vs Testing accuracy")
-    plt.legend()
-    for epoch in range_end_round_epochs:
-        plt.axvline(x=epoch, color="gray", linestyle="--", alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(accuracies_path)
-    plt.close()
-
-    plt.plot(range_num_epochs, train_loss, label="Training loss (by epochs)")
-    plt.plot(range_test_epochs, test_loss, label="Testing loss (by rounds)", marker="o")
-    plt.title("TRAINING VS TESTING LOSS")
-    plt.xlabel("Epochs")
-    plt.ylabel("Training vs Testing loss")
-    plt.legend()
-    for epoch in range_end_round_epochs:
-        plt.axvline(x=epoch, color="gray", linestyle="--", alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(loss_path)
-    plt.close()
+    __plot_training_vs_testing_metrics(
+        range_num_epochs, train_acc, range_test_epochs, test_acc,
+        "accuracy", range_end_round_epochs, accuracies_path
+    )
+    
+    __plot_training_vs_testing_metrics(
+        range_num_epochs, train_loss, range_test_epochs, test_loss,
+        "loss", range_end_round_epochs, loss_path
+    )
 
 
 

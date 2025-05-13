@@ -224,17 +224,17 @@ class FlowerClient(NumPyClient):
         self.hyperparams = hyperparams
         logger.info("Client initialized.")
     
-    def get_parameters(self, config: Dict[str,Any]) -> list[np.ndarray]:
+    def get_parameters(self, config: Dict[str,Any]) -> List[np.ndarray]:
         logger.info("Fetching model parameters...")
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
-    def set_parameters(self, parameters: list[np.ndarray]) -> None:
+    def set_parameters(self, parameters: List[np.ndarray]) -> None:
         logger.info("Updating model parameters...")
         params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.model.load_state_dict(state_dict)
 
-    def fit(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[list[np.ndarray], int, Dict]:
+    def fit(self, parameters: List[np.ndarray], config: Dict[str,Any]) -> Tuple[List[np.ndarray], int, Dict]:
         logger.info(""); logger.info("=== [NEW TRAINING ROUND] ===")
         logger.info("Starting local training...")
         self.set_parameters(parameters)
@@ -242,7 +242,7 @@ class FlowerClient(NumPyClient):
         logger.info("Local training complete.")
         return self.get_parameters(config={}), len(self.x), {}
 
-    def evaluate(self, parameters: list[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
+    def evaluate(self, parameters: List[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
         logger.info("=== [EVALUATION REPORT] ===")
         logger.info("Starting local model evaluation...")
         self.set_parameters(parameters)
