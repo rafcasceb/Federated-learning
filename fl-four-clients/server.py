@@ -57,7 +57,7 @@ def __initialize_model(hyperparams: HyperParameters):
         dropout = hyperparams.dropout)
 
     # Load the weights from the last training round
-    checkpoint_path = "model_round_20.pt"  #! TODO: don't call 20 manually
+    checkpoint_path = f"model_round_{hyperparams.num_rounds}.pt"  #! TODO: what if it was less because it stopped
     if os.path.exists(checkpoint_path):
         model.load_state_dict(torch.load(checkpoint_path))
         logger.info(f"Loaded global model from checkpoint: {checkpoint_path}")
