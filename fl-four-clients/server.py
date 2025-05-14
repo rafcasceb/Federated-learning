@@ -1,4 +1,5 @@
 import os
+from glob import glob
 from typing import List, Tuple
 
 import torch
@@ -55,14 +56,29 @@ def __initialize_model(hyperparams: HyperParameters):
         hidden_sizes = hyperparams.hidden_sizes,
         output_size = hyperparams.output_size,
         dropout = hyperparams.dropout)
-
-    # Load the weights from the last training round
-    checkpoint_path = f"model_round_{hyperparams.num_rounds}.pt"  #! TODO: what if it was less because it stopped
-    if os.path.exists(checkpoint_path):
-        model.load_state_dict(torch.load(checkpoint_path))
-        logger.info(f"Loaded global model from checkpoint: {checkpoint_path}")
+    
+    # Get a list of checkpoint files that match pattern
+    folder_name = "aggregated_models"
+    file_pattern = "model_round_*.pt"
+    file_path = os.path.join(folder_name, file_pattern)
+    checkpoint_files = glob(file_path)
+    checkpoint_files.sort(
+        key=lambda x: int(x.split("_")[-1].replace(".pt", "")),
+        reverse=True
+    )
+    
+    if checkpoint_files:
+        # Load the weights from the latest previous training round
+        latest_checkpoint_path = checkpoint_files[0]
+        model.load_state_dict(torch.load(latest_checkpoint_path))
+        logger.info(f"Loaded global model from the latest checkpoint: {latest_checkpoint_path}")
+        
+        # Delete previous checkpoints
+        for checkpoint in checkpoint_files:
+            os.remove(checkpoint)
+            logger.info(f"Deleted old checkpoint: {checkpoint}")
     else:
-        logger.warning(f"No checkpoint found at {checkpoint_path}. Starting fresh.")
+        logger.warning(f"No checkpoint found. Starting fresh.")
         
     return model
 
@@ -77,6 +93,7 @@ def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedPro
 
     strategy = FedProxSaveModel(
         model=model,
+        logger=logger,
         fraction_fit=1.0,  # fraction of clients that will be sampled per round
         fraction_evaluate=1.0,  # fraction of clients sampled for evaluation
         min_fit_clients=2,  # minimum of clients in a training round
@@ -97,7 +114,8 @@ def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedPro
 # -------------------------
 
 if __name__ == "__main__":
-    # Function start_server is deprecated but it is the only current way to use a custom server_ip
+  
+    hyperparams = load_hyperparameters(CONFIGURATION_FILE)
     
     logger = create_logger("server.log")
     logger.info("Starting FL server...")
@@ -105,8 +123,6 @@ if __name__ == "__main__":
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
-    
-    hyperparams = load_hyperparameters(CONFIGURATION_FILE)
     
     config, strategy = configure_server(hyperparams)
     logger.info("Server configuration complete. Listening on %s", server_address)

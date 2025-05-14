@@ -19,3 +19,4 @@ plots/
 
 # Aggregated models
 aggregated_models/
+model_round_*.pt
