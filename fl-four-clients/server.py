@@ -63,7 +63,7 @@ def __initialize_model(hyperparams: HyperParameters):
     file_path = os.path.join(folder_name, file_pattern)
     checkpoint_files = glob(file_path)
     checkpoint_files.sort(
-        key=lambda x: int(x.split("_")[-1].replace(".pt", "")),
+        key=lambda x: int(x.split("_")[-1].replace("r", "").replace(".pt", "")),
         reverse=True
     )
     

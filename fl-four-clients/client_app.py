@@ -284,7 +284,7 @@ def start_flower_client(client_id: int):
     
     excel_file_name = f"PI-CAI_3__part{CLIENT_ID}.xlsx" 
     temp_csv_file_name = f"temp_database_{CLIENT_ID}.csv"
-    logger_name = f"client{CLIENT_ID}.log"
+    logger_name = f"client_{CLIENT_ID}.log"
     
     global logger
     logger = create_logger(logger_name)

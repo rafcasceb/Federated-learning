@@ -73,6 +73,52 @@ def load_hyperparameters(file_name: str) -> HyperParameters:
 
 
 # -------------------------
+# Paths
+# -------------------------
+
+def create_os_paths(folder_name: str, *file_names: str) -> List:
+    os.makedirs(folder_name, exist_ok=True)
+    paths = [os.path.join(folder_name, fname) for fname in file_names]
+    return paths
+
+
+
+
+# -------------------------
+# Logger
+# -------------------------
+
+def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
+    """It creates a logger for either the server or a client."""
+    
+    folder_name = "logs"
+    file_path = os.path.join(folder_name, file_name)
+    os.makedirs(folder_name, exist_ok=True)
+    
+    # Clear file
+    if os.path.exists(file_path):
+        open(file_path, "w").close()
+    
+    # Configure logger
+    logger = logging.getLogger(file_path)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False  # Prevents logging to console
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s:  %(message)s')
+    handler = RotatingFileHandler(filename=file_path, maxBytes=max_bytes, backupCount=backup_count)
+    handler.namer = lambda filename: filename.replace(".log.", ".") + ".log"  # Modify naming convention: logfile.log.1 → logfile.1.log
+    handler.setFormatter(formatter)
+
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    logger.addHandler(handler)
+         
+    return logger
+
+
+
+
+# -------------------------
 # Plotting
 # -------------------------
 
@@ -156,37 +202,3 @@ def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc
         range_num_epochs, train_loss, range_test_epochs, test_loss,
         "loss", range_end_round_epochs, loss_path
     )
-
-
-
-
-# -------------------------
-# Logger
-# -------------------------
-
-def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1) -> Logger:
-    """It creates a logger for either the server or a client."""
-    
-    folder_name = "logs"
-    file_path = os.path.join(folder_name, file_name)
-    os.makedirs(folder_name, exist_ok=True)
-    
-    # Clear file
-    if os.path.exists(file_path):
-        open(file_path, "w").close()
-    
-    # Configure logger
-    logger = logging.getLogger(file_path)
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False  # Prevents logging to console
-
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s:  %(message)s')
-    handler = RotatingFileHandler(filename=file_path, maxBytes=max_bytes, backupCount=backup_count)
-    handler.namer = lambda filename: filename.replace(".log.", ".") + ".log"  # Modify naming convention: logfile.log.1 → logfile.1.log
-    handler.setFormatter(formatter)
-
-    if logger.hasHandlers():
-        logger.handlers.clear()
-    logger.addHandler(handler)
-         
-    return logger

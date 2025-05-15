@@ -20,3 +20,6 @@ plots/
 # Aggregated models
 aggregated_models/
 server_model_weights_r*.pt
+
+# Temporal client PIDs
+temp_client_pids.json
