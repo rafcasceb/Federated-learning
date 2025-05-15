@@ -19,4 +19,4 @@ plots/
 
 # Aggregated models
 aggregated_models/
-model_round_*.pt
+server_model_weights_r*.pt

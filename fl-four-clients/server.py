@@ -59,7 +59,7 @@ def __initialize_model(hyperparams: HyperParameters):
     
     # Get a list of checkpoint files that match pattern
     folder_name = "aggregated_models"
-    file_pattern = "model_round_*.pt"
+    file_pattern = "server_model_weights_r*.pt"
     file_path = os.path.join(folder_name, file_pattern)
     checkpoint_files = glob(file_path)
     checkpoint_files.sort(

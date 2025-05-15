@@ -29,7 +29,7 @@ class FedProxSaveModel(FedProx):
             # Save to file
             folder_name = "aggregated_models"
             os.makedirs(folder_name, exist_ok=True)
-            file_path = os.path.join(folder_name, f"model_round_{rnd}.pt")
+            file_path = os.path.join(folder_name, f"server_model_weights_r{rnd}.pt")
             torch.save(self.global_model.state_dict(), file_path)
             self.logger.info(f"Saved aggregated global model after round {rnd} at {file_path}.")
 
