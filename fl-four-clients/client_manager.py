@@ -11,6 +11,12 @@ PID_FILE = Path("temp_client_pids.json")
 NUM_CLIENTS_DEFAULT = 3
 
 
+
+
+# -------------------------
+# 1. Start
+# -------------------------
+
 def start_clients(num_clients):
     processes = []
     folder_name = "logs"
@@ -33,6 +39,12 @@ def start_clients(num_clients):
         json.dump(processes, f)
 
 
+
+
+# -------------------------
+# 2. Stop
+# -------------------------
+
 def stop_clients():
     if not PID_FILE.exists():
         print("No running clients found.")
@@ -43,16 +55,53 @@ def stop_clients():
 
     for p in processes:
         pid = p['pid']
+        client_id = p['client_id']
         try:
-            if os.name == 'nt':
-                subprocess.call(["taskkill", "/F", "/PID", str(pid)])
+            is_os_windows = os.name == 'nt'
+            if is_os_windows:
+                result = subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    capture_output=True, text=True
+                )
+                if "not found" in result.stdout + result.stderr:
+                    print(f"Client {client_id} (PID {pid}) already stopped.")
+                    continue
             else:
                 os.kill(pid, signal.SIGTERM)
-            print(f"Stopped client {p['client_id']} (PID {pid})")
+            
+            print(f"Stopped client {client_id} (PID {pid})")
+            
         except Exception as e:
-            print(f"Failed to stop client {p['client_id']} (PID {pid}): {e}")
+            print(f"Failed to stop client {client_id} (PID {pid}): {e}")
 
     PID_FILE.unlink()
+    print("Cleaned PID history.")
+    
+
+
+
+# -------------------------
+# 3. List
+# -------------------------
+    
+def is_process_running(pid):
+    response = False
+    try:
+        is_os_windows = os.name == 'nt'
+        if is_os_windows:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                capture_output=True, text=True
+            )
+            response = str(pid) in result.stdout
+        else:
+            os.kill(pid, 0)
+            response = True
+        
+    except Exception:
+        response = False
+    
+    return response
 
 
 def list_clients():
@@ -63,12 +112,25 @@ def list_clients():
     with open(PID_FILE) as f:
         processes = json.load(f)
 
-    print("Running Clients:")
     for p in processes:
-        print(f"Client {p['client_id']} — PID {p['pid']}")
+        if is_process_running(p['pid']):
+            status = "🟢 running"
+        else:
+            status = "🔴 not running"
+        print(f"Client {p['client_id']} — PID {p['pid']} — {status}")
 
+
+
+
+# -------------------------
+# 4. Main
+# -------------------------
 
 def main():
+    # python client_manager.py start <NUM_CLIENTS>
+    # python client_manager.py stop 
+    # python client_manager.py list 
+    
     if len(sys.argv) < 2:
         print("Usage: python client_manager.py [start N | stop | list]")
         return
