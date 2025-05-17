@@ -29,8 +29,6 @@ RANDOM_STATE = 42
 SHUFFLE_LOADERS = False
 
 # Others
-logger = None
-CLIENT_ID = None
 CONFIGURATION_FILE = "config.yaml"
 general_epoch_train_acc = []
 general_epoch_train_loss = []

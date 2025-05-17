@@ -113,10 +113,10 @@ def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedPro
 # 3. Main Execution (legacy mode)
 # -------------------------
 
-if __name__ == "__main__":
-  
+def main():
     hyperparams = load_hyperparameters(CONFIGURATION_FILE)
     
+    global logger
     logger = create_logger("server.log")
     logger.info("Starting FL server...")
     
@@ -133,3 +133,7 @@ if __name__ == "__main__":
         strategy=strategy,
     )
     logger.info("Closing FL server...")
+
+
+if __name__ == "__main__":
+    main()
