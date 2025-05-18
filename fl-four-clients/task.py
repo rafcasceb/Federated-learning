@@ -1,6 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from logging import Logger
 from logging.handlers import RotatingFileHandler
 from typing import List
@@ -46,7 +46,7 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
 
 
 # -------------------------
-# Hyperparameters
+# Context auxiliary classes
 # -------------------------
 
 @dataclass
@@ -62,6 +62,44 @@ class HyperParameters:
     test_size: float
     learning_rate: float
     binarization_threshold: float
+    
+    
+@dataclass
+class MetricsTracker:
+    train_accuracies: List[float] = field(default_factory=list)
+    train_losses: List[float] = field(default_factory=list)
+    test_accuracies: List[float] = field(default_factory=list)
+    test_losses: List[float] = field(default_factory=list)
+    
+
+@dataclass
+class RandomState:
+    is_test_run: bool = False
+    random_seed: int = 42
+    shuffle_loaders: bool = field(init=False)
+    
+    def __post_init__(self):
+        self.shuffle_loaders = not self.is_test_run
+
+
+@dataclass
+class TrainingContext:
+    client_id: int
+    logger: logging.Logger
+    hyperparams: HyperParameters
+    metrics_tracker: MetricsTracker
+    random_state: RandomState
+
+
+def load_context(client_id, logger, config_file_name: str, is_test_run: bool) -> TrainingContext:
+    context = TrainingContext(
+        client_id=client_id,
+        logger=logger,
+        hyperparams=load_hyperparameters(config_file_name),
+        metrics_tracker=MetricsTracker(),
+        random_state=RandomState(is_test_run)
+    )    
+    return context
     
 
 def load_hyperparameters(file_name: str) -> HyperParameters:
@@ -147,7 +185,7 @@ def plot_loaded_data(data, client_id):
     plt.close()
       
     
-def __plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
+def _plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
                                        metric_name:str, range_end_round_epochs, save_file_path: str):
     
     train_label = f"Training {metric_name.lower()} (by epochs)"
@@ -193,12 +231,12 @@ def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc
         test_acc.pop(r*num_cross_val_folds_round -1)
         test_loss.pop(r*num_cross_val_folds_round -1)
         
-    __plot_training_vs_testing_metrics(
+    _plot_training_vs_testing_metrics(
         range_num_epochs, train_acc, range_test_epochs, test_acc,
         "accuracy", range_end_round_epochs, accuracies_path
     )
     
-    __plot_training_vs_testing_metrics(
+    _plot_training_vs_testing_metrics(
         range_num_epochs, train_loss, range_test_epochs, test_loss,
         "loss", range_end_round_epochs, loss_path
     )

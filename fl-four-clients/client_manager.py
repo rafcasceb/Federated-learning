@@ -10,8 +10,8 @@ from pathlib import Path
 PID_FILE = Path("temp_client_pids.json")
 NUM_CLIENTS_DEFAULT = 3
 NUM_MAX_CLIENTS = 4
-# EXECUTION = f"from client_app import start_flower_client; start_flower_client({i})"
-# TERMINAL_LOGGER_NAME = f"terminal_client_{i}.log"
+EXECUTION_TEMPLATE = "from client_app import start_flower_client; start_flower_client({i})"
+TERMINAL_LOGGER_NAME_TEMPLATE = "terminal_client_{i}.log"
 
 
 
@@ -25,15 +25,17 @@ def start_clients(num_clients):
     folder_name = "logs"
     os.makedirs(folder_name, exist_ok=True)
 
-    for i in range(1, num_clients +1):
-        terminal_log_path = os.path.join(folder_name, f"terminal_client_{i}.log")
+    for i in range(1, num_clients +1):       
+        execution = EXECUTION_TEMPLATE.format(i=i)
+        terminal_logger_name = TERMINAL_LOGGER_NAME_TEMPLATE.format(i=i)
+        
+        terminal_log_path = os.path.join(folder_name, terminal_logger_name)
         terminal_log_file = open(terminal_log_path, "w")
     
-        proc = subprocess.Popen([
-            "python",
-            "-c",
-            f"from client_app import start_flower_client; start_flower_client({i})"
-        ], stdout=terminal_log_file, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(
+            ["python", "-c", execution],
+            stdout=terminal_log_file, stderr=subprocess.STDOUT
+        )
         processes.append({'pid': proc.pid, 'client_id': i})
 
         print(f"Started client {i} with PID {proc.pid}")
@@ -135,7 +137,7 @@ def main():
     # python client_manager.py list 
     
     if len(sys.argv) < 2:
-        print("Usage: python client_manager.py [start N | stop | list]")
+        print("Usage: python client_manager.py [start <NUM_CLIENTS> | stop | list]")
         return
 
     command = sys.argv[1]

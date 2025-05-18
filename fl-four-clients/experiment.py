@@ -8,7 +8,7 @@ from typing import Dict
 
 
 
-NUM_RUNS = 10
+NUM_RUNS = 2
 NUM_CLIENTS = 4
 SERVER_SCRIPT = "server.py"
 CLIENT_MANAGER = "client_manager.py"
