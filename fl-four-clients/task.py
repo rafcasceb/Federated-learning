@@ -74,12 +74,12 @@ class MetricsTracker:
 
 @dataclass
 class RandomState:
-    is_test_run: bool = False
+    is_test_mode: bool = False
     random_seed: int = 42
     shuffle_loaders: bool = field(init=False)
     
     def __post_init__(self):
-        self.shuffle_loaders = not self.is_test_run
+        self.shuffle_loaders = not self.is_test_mode
 
 
 @dataclass
@@ -91,13 +91,13 @@ class TrainingContext:
     random_state: RandomState
 
 
-def load_context(client_id, logger, config_file_name: str, is_test_run: bool) -> TrainingContext:
+def load_context(client_id, logger, config_file_name: str, is_test_mode: bool) -> TrainingContext:
     context = TrainingContext(
         client_id=client_id,
         logger=logger,
         hyperparams=load_hyperparameters(config_file_name),
         metrics_tracker=MetricsTracker(),
-        random_state=RandomState(is_test_run)
+        random_state=RandomState(is_test_mode)
     )    
     return context
     

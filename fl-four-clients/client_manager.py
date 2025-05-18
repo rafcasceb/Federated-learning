@@ -1,3 +1,4 @@
+import argparse
 import subprocess
 import json
 import os
@@ -10,7 +11,7 @@ from pathlib import Path
 PID_FILE = Path("temp_client_pids.json")
 NUM_CLIENTS_DEFAULT = 3
 NUM_MAX_CLIENTS = 4
-EXECUTION_TEMPLATE = "from client_app import start_flower_client; start_flower_client({i})"
+EXECUTION_TEMPLATE = "from client_app import start_flower_client; start_flower_client({i}, {is_test_mode!r})"
 TERMINAL_LOGGER_NAME_TEMPLATE = "terminal_client_{i}.log"
 
 
@@ -20,13 +21,13 @@ TERMINAL_LOGGER_NAME_TEMPLATE = "terminal_client_{i}.log"
 # 1. Start
 # -------------------------
 
-def start_clients(num_clients):
+def _start_clients(num_clients: int, is_test_mode: bool=False):
     processes = []
     folder_name = "logs"
     os.makedirs(folder_name, exist_ok=True)
 
-    for i in range(1, num_clients +1):       
-        execution = EXECUTION_TEMPLATE.format(i=i)
+    for i in range(1, num_clients +1):
+        execution = EXECUTION_TEMPLATE.format(i=i, is_test_mode=is_test_mode)
         terminal_logger_name = TERMINAL_LOGGER_NAME_TEMPLATE.format(i=i)
         
         terminal_log_path = os.path.join(folder_name, terminal_logger_name)
@@ -50,7 +51,7 @@ def start_clients(num_clients):
 # 2. Stop
 # -------------------------
 
-def stop_clients():
+def _stop_clients():
     if not PID_FILE.exists():
         print("No running clients found.")
         return
@@ -89,7 +90,7 @@ def stop_clients():
 # 3. List
 # -------------------------
     
-def is_process_running(pid):
+def _is_process_running(pid: int) -> bool:
     response = False
     try:
         is_os_windows = os.name == 'nt'
@@ -109,7 +110,7 @@ def is_process_running(pid):
     return response
 
 
-def list_clients():
+def _list_clients():
     if not PID_FILE.exists():
         print("No clients running.")
         return
@@ -118,7 +119,7 @@ def list_clients():
         processes = json.load(f)
 
     for p in processes:
-        if is_process_running(p['pid']):
+        if _is_process_running(p['pid']):
             status = "🟢 running"
         else:
             status = "🔴 not running"
@@ -136,28 +137,28 @@ def main():
     # python client_manager.py stop 
     # python client_manager.py list 
     
-    if len(sys.argv) < 2:
-        print("Usage: python client_manager.py [start <NUM_CLIENTS> | stop | list]")
-        return
+    parser = argparse.ArgumentParser(description="Manage federated clients (start/stop/list)")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    command = sys.argv[1]
+    # start subcommand
+    start_parser = subparsers.add_parser("start", help="Start a number of clients")
+    start_parser.add_argument("num_clients", type=int, nargs="?", default=3, help="Number of clients to start")
+    start_parser.add_argument("--test", action="store_true", help="Run clients in test mode")
 
-    if command == "start":
-        try:
-            arg_num_clients = len(sys.argv)
-            if arg_num_clients >= 2 and arg_num_clients <= NUM_MAX_CLIENTS:
-                num = int(sys.argv[2])
-            else:
-                num = NUM_CLIENTS_DEFAULT
-            start_clients(num)
-        except ValueError:
-            print("Please specify a valid number of clients.")
-    elif command == "stop":
-        stop_clients()
-    elif command == "list":
-        list_clients()
-    else:
-        print("Unknown command. Use start, stop, or list.")
+    # stop subcommand
+    subparsers.add_parser("stop", help="Stop all clients")
+
+    # list subcommand
+    subparsers.add_parser("list", help="List running clients")
+
+    args = parser.parse_args()
+
+    if args.command == "start":
+        _start_clients(args.num_clients, is_test_mode=args.test)
+    elif args.command == "stop":
+        _stop_clients()
+    elif args.command == "list":
+        _list_clients()
 
 
 if __name__ == "__main__":

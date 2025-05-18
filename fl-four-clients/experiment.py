@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import math
@@ -18,13 +19,16 @@ RESULTS_FILE = "experiment_results.csv"
 
 
 
-def run_one_experiment(run_id):
+def _run_one_experiment(run_id: int, is_test_mode: bool=False):
     print(f"Starting Run {run_id}")
 
     server_proc = subprocess.Popen(["python", SERVER_SCRIPT])
     print("Server started.")
 
-    subprocess.run(["python", CLIENT_MANAGER, "start", str(NUM_CLIENTS)])
+    start_clients_cmd = ["python", CLIENT_MANAGER, "start", str(NUM_CLIENTS)]
+    if is_test_mode:
+        start_clients_cmd.append("--test")
+    subprocess.run(start_clients_cmd)
     print("Clients started.")
 
     server_proc.wait()
@@ -34,13 +38,13 @@ def run_one_experiment(run_id):
     subprocess.run(["python", CLIENT_MANAGER, "stop"])
     print("Clients stopped.")
 
-    run_metrics = extract_metrics()
-    log_results(run_id, run_metrics)
+    run_metrics = _extract_metrics()
+    _log_results(run_id, run_metrics)
 
     print(f"Run {run_id} complete.\n")
 
 
-def extract_metrics() -> dict[str,float]:
+def _extract_metrics() -> dict[str,float]:
     metrics_file = os.path.join(METRICS_FOLDER, METRICS_FILE)
     if not os.path.exists(metrics_file):
         print(f"Metrics file not found: {metrics_file}")
@@ -52,7 +56,7 @@ def extract_metrics() -> dict[str,float]:
     return metrics
 
 
-def log_results(run_id: int, metrics: Dict[str,float]):
+def _log_results(run_id: int, metrics: Dict[str,float]):
     metrics_dict = {k: round(v, 2) for k, v in metrics.items()}
     metrics_dict["run_id"] = run_id
     fieldnames = ["run_id"] + list(metrics.keys())
@@ -66,7 +70,7 @@ def log_results(run_id: int, metrics: Dict[str,float]):
         writer.writerow(metrics_dict)
         
         
-def append_average_and_std_metrics(results_file: str):
+def _append_average_and_std_metrics(results_file: str):
     with open(results_file, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [row for row in reader if row["run_id"].lower() not in {"avg", "std"}]
@@ -110,14 +114,19 @@ def append_average_and_std_metrics(results_file: str):
 
 
 def main():
-    file_exists = os.path.isfile(RESULTS_FILE)  # ver si lo meto en la carpeta logs
+    file_exists = os.path.isfile(RESULTS_FILE)  #! TODO: ver si lo meto en la carpeta logs
     if file_exists:
         os.remove(RESULTS_FILE)
         
+    parser = argparse.ArgumentParser(description="Run Federated Learning experiments")
+    parser.add_argument("--test", action="store_true", help="Run in Test mode (some lightweight configs for non-deterministic reproducibility)")
+    args = parser.parse_args()
+    is_test_mode = args.test
+        
     for run_id in range(1, NUM_RUNS + 1):
-        run_one_experiment(run_id)
+        _run_one_experiment(run_id, is_test_mode)
     
-    append_average_and_std_metrics(RESULTS_FILE)
+    _append_average_and_std_metrics(RESULTS_FILE)
 
 
 if __name__ == "__main__":

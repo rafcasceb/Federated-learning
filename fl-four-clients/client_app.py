@@ -273,7 +273,7 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: TrainingCon
 
 def _configure_environment(context: TrainingContext):
     rs = context.random_state
-    if rs.is_test_run:
+    if rs.is_test_mode:
         np.random.seed(rs.random_seed)
         torch.manual_seed(rs.random_seed)
         context.logger.info(f"Running in Test mode (deterministic). Seeds set to {rs.random_seed}.")
@@ -281,7 +281,7 @@ def _configure_environment(context: TrainingContext):
         context.logger.info("Running in Production mode (non-deterministic).")
 
 
-def start_flower_client(client_id: int, is_test_run: bool=False):    
+def start_flower_client(client_id: int, is_test_mode: bool=False):
     excel_file_name = f"PI-CAI_3__part{client_id}.xlsx" 
     temp_csv_file_name = f"temp_database_{client_id}.csv"
     
@@ -290,12 +290,11 @@ def start_flower_client(client_id: int, is_test_run: bool=False):
     logger.info("Starting FL client...")
     
     try:
-        context = load_context(client_id, logger, CONFIGURATION_FILE, is_test_run)
+        context = load_context(client_id, logger, CONFIGURATION_FILE, is_test_mode)
     except Exception as e:
         logger.error(f"Failed to load context: {str(e)}")
         logger.info("Closing FL client...")
         return
-    
     
     _configure_environment(context)
     
