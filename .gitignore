@@ -23,3 +23,6 @@ server_model_weights_r*.pt
 
 # Temporal client PIDs
 temp_client_pids.json
+
+# Experiment results CSV
+experiment_results.csv

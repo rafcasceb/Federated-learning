@@ -23,10 +23,10 @@ from torchmetrics.classification import BinaryAccuracy
 
 
 # Random seeds set for testing reproducibility
-np.random.seed(55)
-torch.manual_seed(55)
+# np.random.seed(55)
+# torch.manual_seed(55)
 RANDOM_STATE = 42
-SHUFFLE_LOADERS = False
+SHUFFLE_LOADERS = True
 
 # Others
 CONFIGURATION_FILE = "config.yaml"

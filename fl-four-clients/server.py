@@ -1,3 +1,4 @@
+import json
 import os
 from glob import glob
 from typing import List, Tuple
@@ -13,6 +14,10 @@ from task import HyperParameters, create_logger, load_hyperparameters
 
 METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
 CONFIGURATION_FILE = "config.yaml"
+METRICS_FOLDER = "logs"
+METRICS_FILE = "final_aggr_metrics.json"
+
+round_metrics = []
 
 
 
@@ -20,7 +25,7 @@ CONFIGURATION_FILE = "config.yaml"
 # 1. Obtain metrics
 # -------------------------
 
-def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+def _weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     aggregated_metrics = dict()
     total_num_cases = sum(num_cases for num_cases, _ in metrics)
     
@@ -34,22 +39,34 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         )
     )
     
+    global round_metrics
+    round_metrics = aggregated_metrics.copy()
+    
     return aggregated_metrics
 
 
+def _save_metrics_json(metrics: List[Tuple[int, Metrics]]):    
+    os.makedirs(METRICS_FOLDER, exist_ok=True)
+    metrics_path = os.path.join(METRICS_FOLDER, METRICS_FILE)
+
+    with open(metrics_path, "w") as file:
+        json.dump(metrics, file, indent=2)
+    logger.info(f"Saved final metrics to {metrics_path}")
+
+
 
 
 # -------------------------
-# 2. Configure server
+# 2. Configure server)
 # -------------------------
 
-def __on_fit_config_fn(server_round: int):
+def _on_fit_config_fn(server_round: int):
     '''Log the round number'''
     logger.info(f"[ROUND {server_round}]")
     return {}
 
 
-def __initialize_model(hyperparams: HyperParameters):
+def _initialize_model(hyperparams: HyperParameters):
     # Initialize the same model architecture
     model = NeuralNetwork(
         input_size = hyperparams.input_size,
@@ -83,25 +100,25 @@ def __initialize_model(hyperparams: HyperParameters):
     return model
 
 
-def configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedProxSaveModel]:
+def _configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedProxSaveModel]:
     config = ServerConfig(
         num_rounds=hyperparams.num_rounds,
         round_timeout=600
     )
     
-    model = __initialize_model(hyperparams)
+    model = _initialize_model(hyperparams)
 
     strategy = FedProxSaveModel(
-        model=model,
-        logger=logger,
-        fraction_fit=1.0,  # fraction of clients that will be sampled per round
-        fraction_evaluate=1.0,  # fraction of clients sampled for evaluation
-        min_fit_clients=2,  # minimum of clients in a training round
-        min_evaluate_clients=2,  # minimum of clients for evaluation
-        min_available_clients=2,  # minimum of clients to stablish connection (modify for testing)
-        proximal_mu=0.01,  # regularization strength
-        evaluate_metrics_aggregation_fn=weighted_average,
-        on_fit_config_fn=__on_fit_config_fn,
+        model = model,
+        logger = logger,
+        fraction_fit = 1.0,  # fraction of clients that will be sampled per round
+        fraction_evaluate = 1.0,  # fraction of clients sampled for evaluation
+        min_fit_clients = 2,  # minimum of clients in a training round
+        min_evaluate_clients = 2,  # minimum of clients for evaluation
+        min_available_clients = 2,  # minimum of clients to stablish connection (modify for testing)
+        proximal_mu = 0.01,  # regularization strength
+        evaluate_metrics_aggregation_fn = _weighted_average,
+        on_fit_config_fn = _on_fit_config_fn,
     )
 
     return config, strategy
@@ -123,8 +140,8 @@ def main():
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
-    
-    config, strategy = configure_server(hyperparams)
+
+    config, strategy = _configure_server(hyperparams)
     logger.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
@@ -132,6 +149,9 @@ def main():
         config=config,
         strategy=strategy,
     )
+
+    _save_metrics_json(round_metrics)
+
     logger.info("Closing FL server...")
 
 

@@ -9,6 +9,9 @@ from pathlib import Path
 
 PID_FILE = Path("temp_client_pids.json")
 NUM_CLIENTS_DEFAULT = 3
+NUM_MAX_CLIENTS = 4
+# EXECUTION = f"from client_app import start_flower_client; start_flower_client({i})"
+# TERMINAL_LOGGER_NAME = f"terminal_client_{i}.log"
 
 
 
@@ -23,7 +26,7 @@ def start_clients(num_clients):
     os.makedirs(folder_name, exist_ok=True)
 
     for i in range(1, num_clients +1):
-        terminal_log_path = os.path.join(folder_name, f"termainal_client_{i}.log")
+        terminal_log_path = os.path.join(folder_name, f"terminal_client_{i}.log")
         terminal_log_file = open(terminal_log_path, "w")
     
         proc = subprocess.Popen([
@@ -139,7 +142,11 @@ def main():
 
     if command == "start":
         try:
-            num = int(sys.argv[2]) if len(sys.argv) > 2 else NUM_CLIENTS_DEFAULT
+            arg_num_clients = len(sys.argv)
+            if arg_num_clients >= 2 and arg_num_clients <= NUM_MAX_CLIENTS:
+                num = int(sys.argv[2])
+            else:
+                num = NUM_CLIENTS_DEFAULT
             start_clients(num)
         except ValueError:
             print("Please specify a valid number of clients.")
