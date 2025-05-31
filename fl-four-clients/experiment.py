@@ -9,11 +9,11 @@ from typing import Dict
 
 
 
-NUM_RUNS = 4
+NUM_RUNS = 3
 NUM_CLIENTS = 4
 SERVER_SCRIPT = "server.py"
 CLIENT_MANAGER = "client_manager.py"
-METRICS_FOLDER = "logs"
+FOLDER = "logs"
 METRICS_FILE = "final_aggr_metrics.json"
 RESULTS_FILE = "experiment_results.csv"
 
@@ -45,12 +45,14 @@ def _run_one_experiment(run_id: int, is_test_mode: bool=False):
 
 
 def _extract_metrics() -> dict[str,float]:
-    metrics_file = os.path.join(METRICS_FOLDER, METRICS_FILE)
-    if not os.path.exists(metrics_file):
-        print(f"Metrics file not found: {metrics_file}")
+    file_path = os.path.join(FOLDER, METRICS_FILE)
+    file_exists = os.path.exists(file_path)
+    
+    if not file_exists:
+        print(f"Metrics file not found: {file_path}")
         return {}
 
-    with open(metrics_file, "r") as f:
+    with open(file_path, "r") as f:
         metrics = json.load(f)
     
     return metrics
@@ -61,17 +63,19 @@ def _log_results(run_id: int, metrics: Dict[str,float]):
     metrics_dict["run_id"] = run_id
     fieldnames = ["run_id"] + list(metrics.keys())
 
-    file_exists = os.path.isfile(RESULTS_FILE)  #! TODO: ver si lo meto en la carpeta logs
+    file_path = os.path.join(FOLDER, RESULTS_FILE)
+    file_exists = os.path.exists(file_path)
+    
 
-    with open(RESULTS_FILE, "a", newline="") as csvfile:
+    with open(file_path, "a", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not file_exists:
             writer.writeheader()
         writer.writerow(metrics_dict)
         
         
-def _append_average_and_std_metrics(results_file: str):
-    with open(results_file, "r", newline="") as csvfile:
+def _append_average_and_std_metrics(results_file_path: str):
+    with open(results_file_path, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [row for row in reader if row["run_id"].lower() not in {"avg", "std"}]
 
@@ -104,7 +108,7 @@ def _append_average_and_std_metrics(results_file: str):
     stddevs["run_id"] = "std"
 
     # Append to file
-    with open(results_file, "a", newline="") as csvfile:
+    with open(results_file_path, "a", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=["run_id"] + metric_keys)
         writer.writerow(averages)
         writer.writerow(stddevs)
@@ -114,9 +118,10 @@ def _append_average_and_std_metrics(results_file: str):
 
 
 def main():
-    file_exists = os.path.isfile(RESULTS_FILE)  #! TODO: ver si lo meto en la carpeta logs
+    file_path = os.path.join(FOLDER, RESULTS_FILE)
+    file_exists = os.path.exists(file_path)
     if file_exists:
-        os.remove(RESULTS_FILE)
+        os.remove(file_path)
         
     parser = argparse.ArgumentParser(description="Run Federated Learning experiments")
     parser.add_argument("--test", action="store_true", help="Run in Test mode (some lightweight configs for non-deterministic reproducibility)")
@@ -126,7 +131,7 @@ def main():
     for run_id in range(1, NUM_RUNS + 1):
         _run_one_experiment(run_id, is_test_mode)
     
-    _append_average_and_std_metrics(RESULTS_FILE)
+    _append_average_and_std_metrics(file_path)
 
 
 if __name__ == "__main__":
