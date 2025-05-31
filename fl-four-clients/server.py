@@ -17,7 +17,6 @@ CONFIGURATION_FILE = "config.yaml"
 METRICS_FOLDER = "logs"
 METRICS_FILE = "final_aggr_metrics.json"
 
-round_metrics = []
 
 
 
@@ -42,20 +41,19 @@ def x(context: ServerContext):
             )
         )
         
-        global round_metrics
-        round_metrics = aggregated_metrics.copy()
+        context.round_metrics = aggregated_metrics.copy()
         
         return aggregated_metrics
         
     return _weighted_average
 
 
-def _save_metrics_json(context: ServerContext, metrics: List[Tuple[int, Metrics]]):    
+def _save_round_metrics_json(context: ServerContext):    
     os.makedirs(METRICS_FOLDER, exist_ok=True)
     metrics_path = os.path.join(METRICS_FOLDER, METRICS_FILE)
 
     with open(metrics_path, "w") as file:
-        json.dump(metrics, file, indent=2)
+        json.dump(context.round_metrics, file, indent=2)
         
     context.logger.info(f"Saved final metrics to {metrics_path}")
 
@@ -166,7 +164,7 @@ def main():
         strategy=strategy,
     )
 
-    _save_metrics_json(context, round_metrics)
+    _save_round_metrics_json(context)
 
     logger.info("Closing FL server...")
 

@@ -3,12 +3,13 @@ import os
 from dataclasses import dataclass, field
 from logging import Logger
 from logging.handlers import RotatingFileHandler
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import yaml
+from flwr.common import Metrics
 from sklearn.utils import shuffle
 
 
@@ -95,31 +96,31 @@ class ClientContext:
     client_id: int
     logger: logging.Logger
     hyperparams: HyperParameters
-    metrics_tracker: MetricsTracker
     random_state: RandomState
+    metrics_tracker: MetricsTracker = field(default_factory=MetricsTracker)
 
 
 @dataclass
 class ServerContext:
     logger: logging.Logger
     hyperparams: HyperParameters
+    round_metrics: List[Tuple[int, Metrics]] = field(default_factory=list)
 
 
 def load_client_context(client_id, logger, config_file_name: str, is_test_mode: bool) -> ClientContext:
     context = ClientContext(
-        client_id=client_id,
-        logger=logger,
-        hyperparams=load_hyperparameters(config_file_name),
-        metrics_tracker=MetricsTracker(),
-        random_state=RandomState(is_test_mode)
+        client_id = client_id,
+        logger = logger,
+        hyperparams = load_hyperparameters(config_file_name),
+        random_state = RandomState(is_test_mode)
     )
     return context
     
     
 def load_server_context(logger, config_file_name: str) -> ClientContext:
     context = ServerContext(
-        logger=logger,
-        hyperparams=load_hyperparameters(config_file_name)
+        logger = logger,
+        hyperparams = load_hyperparameters(config_file_name)
     )
     return context
     
