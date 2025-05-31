@@ -26,10 +26,10 @@ METRICS_FILE = "final_aggr_metrics.json"
 # 1. Obtain metrics
 # -------------------------
 
-def x(context: ServerContext):
+def _create_fn_weighted_average(context: ServerContext):
     logger = context.logger
     
-    def _weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    def _weighted_average_fn(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         aggregated_metrics = dict()
         total_num_cases = sum(num_cases for num_cases, _ in metrics)
         
@@ -47,7 +47,7 @@ def x(context: ServerContext):
         
         return aggregated_metrics
         
-    return _weighted_average
+    return _weighted_average_fn
 
 
 def _save_round_metrics_json(context: ServerContext):    
@@ -67,7 +67,7 @@ def _save_round_metrics_json(context: ServerContext):
 # 2. Configure server)
 # -------------------------
 
-def y(context: ServerContext):
+def _create_fn_on_fit_config(context: ServerContext):
     logger = context.logger
     
     def _on_fit_config_fn(server_round: int):
@@ -78,16 +78,8 @@ def y(context: ServerContext):
     return _on_fit_config_fn
 
 
-def _initialize_model(context: ServerContext):
-    hp = context.hyperparams
+def _load_model_checkpoints(model: NeuralNetwork, context: ServerContext) -> NeuralNetwork:
     logger = context.logger
-    
-    # Initialize the same model architecture
-    model = NeuralNetwork(
-        input_size = hp.input_size,
-        hidden_sizes = hp.hidden_sizes,
-        output_size = hp.output_size,
-        dropout = hp.dropout)
     
     # Get a list of checkpoint files that match pattern
     file_path = os.path.join(MODELS_FOLDER, MODELS_FILE_PATTERN)
@@ -100,8 +92,18 @@ def _initialize_model(context: ServerContext):
     if checkpoint_files:
         # Load the weights from the latest previous training round
         latest_checkpoint_path = checkpoint_files[0]
-        model.load_state_dict(torch.load(latest_checkpoint_path))
+        state_dict = torch.load(latest_checkpoint_path)
+        #model.load_state_dict(state_dict)
         logger.info(f"Loaded global model from the latest checkpoint: {latest_checkpoint_path}")
+        
+        # log??
+        logger.info("")
+        logger.info("Current model parameter means:")
+        logger.info({
+            name: param.data.float().mean().item()
+            for name, param in model.named_parameters()
+            if param.data.dtype.is_floating_point
+        })
         
         # Delete previous checkpoints
         for checkpoint in checkpoint_files:
@@ -109,7 +111,24 @@ def _initialize_model(context: ServerContext):
             logger.info(f"Deleted old checkpoint: {checkpoint}")
     else:
         logger.warning(f"No checkpoint found. Starting fresh.")
-        
+    
+    return model
+
+
+def _initialize_model(context: ServerContext):
+    hp = context.hyperparams
+    
+    # Initialize the same model architecture as clients
+    model = NeuralNetwork(
+        input_size = hp.input_size,
+        hidden_sizes = hp.hidden_sizes,
+        output_size = hp.output_size,
+        dropout = hp.dropout)
+    
+    for name, param in model.named_parameters():
+        torch.nn.init.constant_(param, 42.0)
+    
+    model = _load_model_checkpoints(model, context)
     return model
 
 
@@ -132,8 +151,8 @@ def _configure_server(context: ServerContext) -> Tuple[ServerConfig, FedProxSave
         min_evaluate_clients = hp.min_evaluate_clients,     # minimum of clients for evaluation
         min_available_clients = hp.min_available_clients,   # minimum of clients to stablish connection (modify for testing)
         proximal_mu = hp.proximal_mu,                       # regularization strength
-        evaluate_metrics_aggregation_fn = x(context),
-        on_fit_config_fn = y(context),
+        evaluate_metrics_aggregation_fn = _create_fn_weighted_average(context),
+        on_fit_config_fn = _create_fn_on_fit_config(context),
     )
 
     return config, strategy
