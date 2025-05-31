@@ -72,6 +72,7 @@ def _create_fn_on_fit_config(context: ServerContext):
     
     def _on_fit_config_fn(server_round: int):
         '''Log the round number'''
+        logger.info("")
         logger.info(f"[ROUND {server_round}]")
         return {}
 
@@ -93,17 +94,16 @@ def _load_model_checkpoints(model: NeuralNetwork, context: ServerContext) -> Neu
         # Load the weights from the latest previous training round
         latest_checkpoint_path = checkpoint_files[0]
         state_dict = torch.load(latest_checkpoint_path)
-        #model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict)
         logger.info(f"Loaded global model from the latest checkpoint: {latest_checkpoint_path}")
         
-        # log??
-        logger.info("")
-        logger.info("Current model parameter means:")
-        logger.info({
+        # Log initial mean of each param
+        initial_mean_of_params = {
             name: param.data.float().mean().item()
             for name, param in model.named_parameters()
             if param.data.dtype.is_floating_point
-        })
+        }
+        logger.info(f"Initial model parameter means: {initial_mean_of_params}")
         
         # Delete previous checkpoints
         for checkpoint in checkpoint_files:
@@ -124,9 +124,6 @@ def _initialize_model(context: ServerContext):
         hidden_sizes = hp.hidden_sizes,
         output_size = hp.output_size,
         dropout = hp.dropout)
-    
-    for name, param in model.named_parameters():
-        torch.nn.init.constant_(param, 42.0)
     
     model = _load_model_checkpoints(model, context)
     return model
