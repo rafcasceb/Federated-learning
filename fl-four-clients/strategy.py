@@ -6,6 +6,11 @@ from flwr.server.strategy import FedProx
 
 
 
+MODELS_FOLDER = "aggregated_models"
+MODELS_FILE_TEMPLATE = "server_model_weights_r{rnd}.pt"
+
+
+
 class FedProxSaveModel(FedProx):
 
     def __init__(self, model, logger, *args, **kwargs):
@@ -27,9 +32,9 @@ class FedProxSaveModel(FedProx):
             self.global_model.load_state_dict(state_dict)
 
             # Save to file
-            folder_name = "aggregated_models"
-            os.makedirs(folder_name, exist_ok=True)
-            file_path = os.path.join(folder_name, f"server_model_weights_r{rnd}.pt")
+            os.makedirs(MODELS_FOLDER, exist_ok=True)
+            model_file_name = MODELS_FILE_TEMPLATE.format(rnd=rnd)
+            file_path = os.path.join(MODELS_FOLDER, model_file_name)
             torch.save(self.global_model.state_dict(), file_path)
             self.logger.info(f"Saved aggregated global model after round {rnd} at {file_path}.")
 

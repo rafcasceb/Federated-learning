@@ -8,12 +8,14 @@ from flwr.common import Metrics
 from flwr.server import ServerConfig, start_server
 from model import NeuralNetwork
 from strategy import FedProxSaveModel
-from task import HyperParameters, ServerContext, create_logger, load_hyperparameters, load_server_context
+from task import ServerContext, create_logger, load_server_context
 
 
 
 METRICS_NAMES = ["Accuracy", "Precision", "Recall", "F1 score", "Balanced accuracy", "MCC"]
 CONFIGURATION_FILE = "config.yaml"
+MODELS_FOLDER = "aggregated_models"
+MODELS_FILE_PATTERN = "server_model_weights_r*.pt"
 METRICS_FOLDER = "logs"
 METRICS_FILE = "final_aggr_metrics.json"
 
@@ -88,9 +90,7 @@ def _initialize_model(context: ServerContext):
         dropout = hp.dropout)
     
     # Get a list of checkpoint files that match pattern
-    folder_name = "aggregated_models"
-    file_pattern = "server_model_weights_r*.pt"
-    file_path = os.path.join(folder_name, file_pattern)
+    file_path = os.path.join(MODELS_FOLDER, MODELS_FILE_PATTERN)
     checkpoint_files = glob(file_path)
     checkpoint_files.sort(
         key=lambda x: int(x.split("_")[-1].replace("r", "").replace(".pt", "")),
