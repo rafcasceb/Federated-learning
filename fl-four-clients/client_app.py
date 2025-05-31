@@ -14,7 +14,7 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
                              matthews_corrcoef, precision_score, recall_score)
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
-from task import (TrainingContext, create_logger, load_context,
+from task import (ClientContext, create_logger, load_client_context,
                   plot_accuracy_and_loss, plot_loaded_data, preprocess_data)
 from torch.utils.data import DataLoader, TensorDataset
 from torchmetrics import MeanMetric
@@ -32,7 +32,7 @@ CONFIGURATION_FILE = "config.yaml"
 # 1. Data Preparation
 # -------------------------
 
-def _read_data(excel_file_name: str, temp_csv_file_name:str, context: TrainingContext):
+def _read_data(excel_file_name: str, temp_csv_file_name:str, context: ClientContext):
     folder_name = "data"
     excel_path = os.path.join(folder_name, excel_file_name)
     temp_csv_path = os.path.join(folder_name, temp_csv_file_name)
@@ -48,7 +48,7 @@ def _read_data(excel_file_name: str, temp_csv_file_name:str, context: TrainingCo
     return data
 
 
-def load_data(excel_file_name: str, temp_csv_file_name:str, context: TrainingContext) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def load_data(excel_file_name: str, temp_csv_file_name:str, context: ClientContext) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     data = _read_data(excel_file_name, temp_csv_file_name, context)
     data = preprocess_data(data)
     context.logger.info("Data preprocessing completed. Final shape: %s", data.shape)
@@ -76,7 +76,7 @@ def load_data(excel_file_name: str, temp_csv_file_name:str, context: TrainingCon
 # 2. Training and Evaluation
 # -------------------------
 
-def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, context: TrainingContext):
+def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, context: ClientContext):
     hp = context.hyperparams
     rs = context.random_state
     
@@ -105,7 +105,7 @@ def train_cross_validation(model: nn.Module, x: torch.Tensor, y: torch.Tensor, c
     context.logger.info(f"Cross-Validation -- Avg Loss: {avg_loss_all_folders:.4f}, Avg Accuracy: {avg_acc_all_folders:.4f}")
     
 
-def train(model: nn.Module, train_data: DataLoader, context: TrainingContext) -> None:
+def train(model: nn.Module, train_data: DataLoader, context: ClientContext) -> None:
     hp = context.hyperparams
     
     criterion = nn.BCEWithLogitsLoss()  # Entropy loss
@@ -139,7 +139,7 @@ def train(model: nn.Module, train_data: DataLoader, context: TrainingContext) ->
         context.metrics_tracker.train_losses.append(epoch_loss)
 
 
-def _calculate_average_test_metrics(all_labels: List[int], all_predictions: List[int], context: TrainingContext) -> Dict[str,float]:
+def _calculate_average_test_metrics(all_labels: List[int], all_predictions: List[int], context: ClientContext) -> Dict[str,float]:
     accuracy = accuracy_score(all_labels, all_predictions)                        # (TP+FN) / (TP+TN+FP+FN)  =  accurate_predictions / all_predictions
     precision = precision_score(all_labels, all_predictions, zero_division=0)     # TP / (TP+FP)  =  TP / predicted_positives
     recall = recall_score(all_labels, all_predictions, zero_division=0)           # TP / (TP+FN)  =  TP / real_positives
@@ -162,7 +162,7 @@ def _calculate_average_test_metrics(all_labels: List[int], all_predictions: List
     return metrics 
 
 
-def test(model: nn.Module, test_data: DataLoader, context: TrainingContext) -> Tuple[float, Dict[str,float]]:
+def test(model: nn.Module, test_data: DataLoader, context: ClientContext) -> Tuple[float, Dict[str,float]]:
     model.eval()  # Set to evaluation mode
     loss_metric = MeanMetric()
     all_labels = []
@@ -207,7 +207,7 @@ def test(model: nn.Module, test_data: DataLoader, context: TrainingContext) -> T
 
 class FlowerClient(NumPyClient):
     
-    def __init__(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor, context: TrainingContext) -> None:
+    def __init__(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor, context: ClientContext) -> None:
         self.model = model
         self.x = x
         self.y = y
@@ -247,7 +247,7 @@ class FlowerClient(NumPyClient):
 
 
 
-def client_fn(excel_file_name: str, temp_csv_file_name:str, context: TrainingContext) -> FlowerClient:
+def client_fn(excel_file_name: str, temp_csv_file_name:str, context: ClientContext) -> FlowerClient:
     hp = context.hyperparams
     
     x, y = load_data(excel_file_name, temp_csv_file_name, context)
@@ -271,7 +271,7 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: TrainingCon
 # 4. Main Execution (legacy mode)
 # -------------------------
 
-def _configure_environment(context: TrainingContext):
+def _configure_environment(context: ClientContext):
     rs = context.random_state
     if rs.is_test_mode:
         np.random.seed(rs.random_seed)
@@ -290,7 +290,7 @@ def start_flower_client(client_id: int, is_test_mode: bool=False):
     logger.info("Starting FL client...")
     
     try:
-        context = load_context(client_id, logger, CONFIGURATION_FILE, is_test_mode)
+        context = load_client_context(client_id, logger, CONFIGURATION_FILE, is_test_mode)
     except Exception as e:
         logger.error(f"Failed to load context: {str(e)}")
         logger.info("Closing FL client...")

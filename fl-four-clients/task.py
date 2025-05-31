@@ -56,6 +56,7 @@ class HyperParameters:
     input_size: int
     hidden_sizes: List[int]
     output_size: int
+    
     num_rounds: int
     num_cross_val_folds_round: int
     num_epochs: int
@@ -63,14 +64,21 @@ class HyperParameters:
     learning_rate: float
     binarization_threshold: float
     
-    
+    fraction_fit: float
+    fraction_evaluate: float
+    min_fit_clients: int
+    min_evaluate_clients: int
+    min_available_clients: int
+    proximal_mu: float
+
+
 @dataclass
 class MetricsTracker:
     train_accuracies: List[float] = field(default_factory=list)
     train_losses: List[float] = field(default_factory=list)
     test_accuracies: List[float] = field(default_factory=list)
     test_losses: List[float] = field(default_factory=list)
-    
+
 
 @dataclass
 class RandomState:
@@ -83,7 +91,7 @@ class RandomState:
 
 
 @dataclass
-class TrainingContext:
+class ClientContext:
     client_id: int
     logger: logging.Logger
     hyperparams: HyperParameters
@@ -91,14 +99,28 @@ class TrainingContext:
     random_state: RandomState
 
 
-def load_context(client_id, logger, config_file_name: str, is_test_mode: bool) -> TrainingContext:
-    context = TrainingContext(
+@dataclass
+class ServerContext:
+    logger: logging.Logger
+    hyperparams: HyperParameters
+
+
+def load_client_context(client_id, logger, config_file_name: str, is_test_mode: bool) -> ClientContext:
+    context = ClientContext(
         client_id=client_id,
         logger=logger,
         hyperparams=load_hyperparameters(config_file_name),
         metrics_tracker=MetricsTracker(),
         random_state=RandomState(is_test_mode)
-    )    
+    )
+    return context
+    
+    
+def load_server_context(logger, config_file_name: str) -> ClientContext:
+    context = ServerContext(
+        logger=logger,
+        hyperparams=load_hyperparameters(config_file_name)
+    )
     return context
     
 

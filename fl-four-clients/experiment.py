@@ -9,7 +9,7 @@ from typing import Dict
 
 
 
-NUM_RUNS = 2
+NUM_RUNS = 4
 NUM_CLIENTS = 4
 SERVER_SCRIPT = "server.py"
 CLIENT_MANAGER = "client_manager.py"
@@ -61,7 +61,7 @@ def _log_results(run_id: int, metrics: Dict[str,float]):
     metrics_dict["run_id"] = run_id
     fieldnames = ["run_id"] + list(metrics.keys())
 
-    file_exists = os.path.isfile(RESULTS_FILE)  # ver si lo meto en la carpeta logs
+    file_exists = os.path.isfile(RESULTS_FILE)  #! TODO: ver si lo meto en la carpeta logs
 
     with open(RESULTS_FILE, "a", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

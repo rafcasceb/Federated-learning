@@ -8,7 +8,7 @@ from flwr.common import Metrics
 from flwr.server import ServerConfig, start_server
 from model import NeuralNetwork
 from strategy import FedProxSaveModel
-from task import HyperParameters, create_logger, load_hyperparameters
+from task import HyperParameters, ServerContext, create_logger, load_hyperparameters, load_server_context
 
 
 
@@ -25,33 +25,40 @@ round_metrics = []
 # 1. Obtain metrics
 # -------------------------
 
-def _weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    aggregated_metrics = dict()
-    total_num_cases = sum(num_cases for num_cases, _ in metrics)
+def x(context: ServerContext):
+    logger = context.logger
     
-    for metric in METRICS_NAMES:
-        weighted_sum = sum(num_cases * m[metric] for num_cases, m in metrics)
-        aggregated_metrics[metric] = weighted_sum / total_num_cases
+    def _weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+        aggregated_metrics = dict()
+        total_num_cases = sum(num_cases for num_cases, _ in metrics)
+        
+        for metric in METRICS_NAMES:
+            weighted_sum = sum(num_cases * m[metric] for num_cases, m in metrics)
+            aggregated_metrics[metric] = weighted_sum / total_num_cases
 
-    logger.info(
-        f"Round metrics -- " + ", ".join(
-            [f"{metric}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
+        logger.info(
+            f"Round metrics -- " + ", ".join(
+                [f"{metric}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
+            )
         )
-    )
-    
-    global round_metrics
-    round_metrics = aggregated_metrics.copy()
-    
-    return aggregated_metrics
+        
+        global round_metrics
+        round_metrics = aggregated_metrics.copy()
+        
+        return aggregated_metrics
+        
+    return _weighted_average
 
 
-def _save_metrics_json(metrics: List[Tuple[int, Metrics]]):    
+def _save_metrics_json(context: ServerContext, metrics: List[Tuple[int, Metrics]]):    
     os.makedirs(METRICS_FOLDER, exist_ok=True)
     metrics_path = os.path.join(METRICS_FOLDER, METRICS_FILE)
 
     with open(metrics_path, "w") as file:
         json.dump(metrics, file, indent=2)
-    logger.info(f"Saved final metrics to {metrics_path}")
+        
+    context.logger.info(f"Saved final metrics to {metrics_path}")
+
 
 
 
@@ -60,19 +67,27 @@ def _save_metrics_json(metrics: List[Tuple[int, Metrics]]):
 # 2. Configure server)
 # -------------------------
 
-def _on_fit_config_fn(server_round: int):
-    '''Log the round number'''
-    logger.info(f"[ROUND {server_round}]")
-    return {}
+def y(context: ServerContext):
+    logger = context.logger
+    
+    def _on_fit_config_fn(server_round: int):
+        '''Log the round number'''
+        logger.info(f"[ROUND {server_round}]")
+        return {}
+
+    return _on_fit_config_fn
 
 
-def _initialize_model(hyperparams: HyperParameters):
+def _initialize_model(context: ServerContext):
+    hp = context.hyperparams
+    logger = context.logger
+    
     # Initialize the same model architecture
     model = NeuralNetwork(
-        input_size = hyperparams.input_size,
-        hidden_sizes = hyperparams.hidden_sizes,
-        output_size = hyperparams.output_size,
-        dropout = hyperparams.dropout)
+        input_size = hp.input_size,
+        hidden_sizes = hp.hidden_sizes,
+        output_size = hp.output_size,
+        dropout = hp.dropout)
     
     # Get a list of checkpoint files that match pattern
     folder_name = "aggregated_models"
@@ -100,25 +115,27 @@ def _initialize_model(hyperparams: HyperParameters):
     return model
 
 
-def _configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedProxSaveModel]:
+def _configure_server(context: ServerContext) -> Tuple[ServerConfig, FedProxSaveModel]:
+    hp = context.hyperparams
+    
     config = ServerConfig(
-        num_rounds=hyperparams.num_rounds,
+        num_rounds=hp.num_rounds,
         round_timeout=600
     )
     
-    model = _initialize_model(hyperparams)
+    model = _initialize_model(context)
 
     strategy = FedProxSaveModel(
         model = model,
-        logger = logger,
-        fraction_fit = 1.0,  # fraction of clients that will be sampled per round
-        fraction_evaluate = 1.0,  # fraction of clients sampled for evaluation
-        min_fit_clients = 2,  # minimum of clients in a training round
-        min_evaluate_clients = 2,  # minimum of clients for evaluation
-        min_available_clients = 2,  # minimum of clients to stablish connection (modify for testing)
-        proximal_mu = 0.01,  # regularization strength
-        evaluate_metrics_aggregation_fn = _weighted_average,
-        on_fit_config_fn = _on_fit_config_fn,
+        logger = context.logger,
+        fraction_fit = hp.fraction_fit,                     # fraction of clients that will be sampled per round
+        fraction_evaluate = hp.fraction_evaluate,           # fraction of clients sampled for evaluation
+        min_fit_clients = hp.min_fit_clients,               # minimum of clients in a training round
+        min_evaluate_clients = hp.min_evaluate_clients,     # minimum of clients for evaluation
+        min_available_clients = hp.min_available_clients,   # minimum of clients to stablish connection (modify for testing)
+        proximal_mu = hp.proximal_mu,                       # regularization strength
+        evaluate_metrics_aggregation_fn = x(context),
+        on_fit_config_fn = y(context),
     )
 
     return config, strategy
@@ -131,17 +148,16 @@ def _configure_server(hyperparams: HyperParameters) -> Tuple[ServerConfig, FedPr
 # -------------------------
 
 def main():
-    hyperparams = load_hyperparameters(CONFIGURATION_FILE)
-    
-    global logger
     logger = create_logger("server.log")
+    context = load_server_context(logger, CONFIGURATION_FILE)
+    
     logger.info("Starting FL server...")
     
     server_ip = "192.168.18.12"
     server_port = "8081"
     server_address = f"{server_ip}:{server_port}"
 
-    config, strategy = _configure_server(hyperparams)
+    config, strategy = _configure_server(context)
     logger.info("Server configuration complete. Listening on %s", server_address)
 
     start_server(
@@ -150,7 +166,7 @@ def main():
         strategy=strategy,
     )
 
-    _save_metrics_json(round_metrics)
+    _save_metrics_json(context, round_metrics)
 
     logger.info("Closing FL server...")
 
