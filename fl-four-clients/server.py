@@ -99,7 +99,7 @@ def _load_model_checkpoints(model: NeuralNetwork, context: ServerContext) -> Neu
         
         # Log initial mean of each param
         initial_mean_of_params = {
-            name: param.data.float().mean().item()
+            name: round(param.data.float().mean().item(), 6)
             for name, param in model.named_parameters()
             if param.data.dtype.is_floating_point
         }

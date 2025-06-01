@@ -35,7 +35,7 @@ class FedProxSaveModel(FedProx):
             
             # Log mean of each param after aggregation
             initial_mean_of_params = {
-                k: v.float().mean().item()
+                k: round(v.float().mean().item(), 6)
                 for k, v in state_dict.items()
                 if v.dtype.is_floating_point
             }
