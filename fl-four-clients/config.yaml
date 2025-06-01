@@ -7,9 +7,9 @@ output_size: 1
 
 # Learning
 num_rounds: 5 #20 #10
-do_cross_val: False
+do_cross_val: True
 num_cross_val_folds: 2 #5 #3
-num_epochs: 100 #50 #20
+num_epochs: 50 #50 #20
 test_size: 0.2
 learning_rate: 0.0001
 binarization_threshold: 0.4

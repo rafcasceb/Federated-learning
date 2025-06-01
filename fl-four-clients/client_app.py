@@ -203,8 +203,8 @@ class FlowerClient(NumPyClient):
         return self.get_parameters(config={}), num_examples, {}
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
-        self.context.logger.info("=== [EVALUATION REPORT] ===")
-        self.context.logger.info("Starting local model evaluation...")
+        self.context.logger.info("=== [VALIDATION REPORT] ===")
+        self.context.logger.info("Starting local model validation...")
         self.set_parameters(parameters)
         loss, metrics = test(self.model, self.test_loader, self.context)
         num_examples = len(self.test_loader.dataset)

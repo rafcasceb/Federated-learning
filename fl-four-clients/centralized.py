@@ -34,7 +34,8 @@ def cross_validation_test(x: torch.Tensor, y: torch.Tensor, context: ClientConte
     acc_all_folds = []
 
     for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(x)):
-        context.logger.info(f"Training cross-validation fold {fold_idx+1}/{hp.num_cross_val_folds}...")
+        context.logger.info("")
+        context.logger.info(f"Cross-validation fold {fold_idx+1}/{hp.num_cross_val_folds}...")
         
         model_fold = NeuralNetwork(
             input_size=hp.input_size,
@@ -62,7 +63,7 @@ def cross_validation_test(x: torch.Tensor, y: torch.Tensor, context: ClientConte
     context.logger.info(f"Cross-validation -- Avg Loss: {avg_loss_all_folds:.4f}, Avg Accuracy: {avg_acc_all_folds:.4f}")
 
 
-def centralized_train_eval(context: ClientContext) -> Tuple[float, Dict[str,float]]:
+def centralized_train_eval(context: ClientContext): #! TODO -> Tuple[float, Dict[str,float]]:
     hp = context.hyperparams
     rs = context.random_state
     logger = context.logger
@@ -75,6 +76,8 @@ def centralized_train_eval(context: ClientContext) -> Tuple[float, Dict[str,floa
         dropout=hp.dropout
     )
 
+    logger.info("")
+    logger.info("=== [TRAINING] ===")
     context.logger.info("Starting local model training...")
     do_cross_validation = (hp.do_cross_val) and (hp.num_cross_val_folds > 1)
     
@@ -83,19 +86,25 @@ def centralized_train_eval(context: ClientContext) -> Tuple[float, Dict[str,floa
         whole_dataloader = DataLoader(whole_dataset, batch_size=hp.batch_size, shuffle=rs.shuffle_loaders)
         train(model, whole_dataloader, context)
         logger.info("Local training complete.")
-        loss, metrics = cross_validation_test(x, y, context)
+        
+        logger.info("")
+        logger.info("=== [VALIDATION REPORT] ===")
+        logger.info("Starting local model validation...")
+        cross_validation_test(x, y, context)
     else:
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=hp.test_size, random_state=rs.random_seed)
         train_dataset = TensorDataset(x_train, y_train)
         test_dataset = TensorDataset(x_test, y_test)
         train_loader = DataLoader(train_dataset, batch_size=hp.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=hp.batch_size, shuffle=False)
-
         train(model, train_loader, context)
         logger.info("Local training complete.")
-        loss, metrics = test(model, test_loader, context)
+        
+        logger.info("=== [VALIDATION REPORT] ===")
+        logger.info("Starting local model validation...")
+        test(model, test_loader, context)
     
-    return loss, metrics
+    #return loss, metrics
 
 
 
@@ -118,11 +127,13 @@ def start_centralized_training(client_id: int, is_test_mode: bool=False):
     configure_environment(context)
     centralized_train_eval(context)
 
-    mt = context.metrics_tracker
-    plot_accuracy_and_loss_centralized(
-        mt.train_accuracies, mt.train_losses, mt.test_accuracies, mt.test_losses,
-        context.client_id, context.hyperparams
-    )
+    do_cross_validation = (context.hyperparams.do_cross_val) and (context.hyperparams.num_cross_val_folds > 1)
+    if not do_cross_validation:
+        mt = context.metrics_tracker
+        plot_accuracy_and_loss_centralized(
+            mt.train_accuracies, mt.train_losses, mt.test_accuracies, mt.test_losses,
+            context.client_id, context.hyperparams
+        )
     logger.info("Centralized training finished")
 
 
