@@ -1,10 +1,7 @@
-import os
+from typing import Dict, Tuple
 
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from client_app import configure_environment, load_data, test, train
 from model import NeuralNetwork
 from sklearn.model_selection import KFold, train_test_split
@@ -27,7 +24,7 @@ IS_TEST_MODE = False
 # 1. Training and Evaluation
 # -------------------------
 
-def cross_validation_test(x: torch.Tensor, y: torch.Tensor, context: ClientContext):
+def cross_validation_test(x: torch.Tensor, y: torch.Tensor, context: ClientContext) -> None:
     context.logger.info("Starting cross-validation training and testing...")
     hp = context.hyperparams
     rs = context.random_state
@@ -65,7 +62,7 @@ def cross_validation_test(x: torch.Tensor, y: torch.Tensor, context: ClientConte
     context.logger.info(f"Cross-validation -- Avg Loss: {avg_loss_all_folds:.4f}, Avg Accuracy: {avg_acc_all_folds:.4f}")
 
 
-def centralized_train_eval(context: ClientContext):
+def centralized_train_eval(context: ClientContext) -> Tuple[float, Dict[str,float]]:
     hp = context.hyperparams
     rs = context.random_state
     logger = context.logger
@@ -79,7 +76,6 @@ def centralized_train_eval(context: ClientContext):
     )
 
     context.logger.info("Starting local model training...")
-    # return get_parameters(config={}), len(x), {}
     do_cross_validation = (hp.do_cross_val) and (hp.num_cross_val_folds > 1)
     
     if do_cross_validation:
@@ -103,7 +99,8 @@ def centralized_train_eval(context: ClientContext):
         train(model, train_loader, context)
         logger.info("Local training complete.")
         loss, metrics = test(model, test_loader, context)
-
+    
+    return loss, metrics
 
 
 

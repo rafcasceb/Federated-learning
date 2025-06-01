@@ -142,8 +142,6 @@ def test(model: nn.Module, test_data: DataLoader, context: ClientContext) -> Tup
     
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
-            #! TODO: Assert no NaN in inputs and labels?
-
             # Realize prediction
             outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
             #! print("Raw outputs:", outputs)
@@ -175,18 +173,7 @@ def test(model: nn.Module, test_data: DataLoader, context: ClientContext) -> Tup
 
 class FlowerClient(NumPyClient):
 
-    def __init__(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor, context: ClientContext) -> None:
-        #! TODO: Pasar esto al client_fn
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y,
-            test_size = context.hyperparams.test_size,
-            random_state = context.random_state.random_seed
-        )
-        train_dataset = TensorDataset(x_train, y_train)
-        test_dataset = TensorDataset(x_test, y_test)
-        train_loader = DataLoader(train_dataset, batch_size=context.hyperparams.batch_size, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=context.hyperparams.batch_size, shuffle=False)
-
+    def __init__(self, model: nn.Module, train_loader: DataLoader, test_loader: DataLoader, context: ClientContext) -> None:
         self.model = model
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -194,18 +181,15 @@ class FlowerClient(NumPyClient):
         
         self.context.logger.info("Client initialized.")
     
-    
     def get_parameters(self, config: Dict[str,Any]) -> List[np.ndarray]:
         self.context.logger.info("Fetching model parameters...")
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         self.context.logger.info("Updating model parameters...")
         params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.model.load_state_dict(state_dict)
-
 
     def fit(self, parameters: List[np.ndarray], config: Dict[str,Any]) -> Tuple[List[np.ndarray], int, Dict]:
         logger = self.context.logger
@@ -218,7 +202,6 @@ class FlowerClient(NumPyClient):
         logger.info("Local training complete.")
         num_examples = len(self.train_loader.dataset)
         return self.get_parameters(config={}), num_examples, {}
-
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str,Any]) -> Tuple[float, int, Dict[str,float]]:
         self.context.logger.info("=== [EVALUATION REPORT] ===")
@@ -236,6 +219,16 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: ClientConte
     x, y = load_data(excel_file_name, temp_csv_file_name, context)
     if x.shape[1] != hp.input_size:
         context.logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hp.input_size}.")
+
+    x_train, x_test, y_train, y_test = train_test_split(
+        x, y,
+        test_size = context.hyperparams.test_size,
+        random_state = context.random_state.random_seed
+    )
+    train_dataset = TensorDataset(x_train, y_train)
+    test_dataset = TensorDataset(x_test, y_test)
+    train_loader = DataLoader(train_dataset, batch_size=context.hyperparams.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=context.hyperparams.batch_size, shuffle=False)
     
     model = NeuralNetwork(
         input_size = hp.input_size,
@@ -244,7 +237,7 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: ClientConte
         dropout = hp.dropout
     )
     
-    return FlowerClient(model, x, y, context).to_client()
+    return FlowerClient(model, train_loader, test_loader, context).to_client()
 
 
 
