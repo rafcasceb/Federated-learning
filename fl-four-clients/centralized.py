@@ -6,7 +6,7 @@ from client_app import configure_environment, load_data, test, train
 from model import NeuralNetwork
 from sklearn.model_selection import KFold, train_test_split
 from task import (ClientContext, create_logger, load_client_context,
-                  plot_accuracy_and_loss)
+                  plot_accuracy_and_loss_centralized)
 from torch.utils.data import DataLoader, TensorDataset
 
 
@@ -84,13 +84,8 @@ def centralized_train_eval(context: ClientContext) -> Tuple[float, Dict[str,floa
         train(model, whole_dataloader, context)
         logger.info("Local training complete.")
         loss, metrics = cross_validation_test(x, y, context)
-        
     else:
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y,
-            test_size = hp.test_size,
-            random_state = rs.random_seed
-        )
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=hp.test_size, random_state=rs.random_seed)
         train_dataset = TensorDataset(x_train, y_train)
         test_dataset = TensorDataset(x_test, y_test)
         train_loader = DataLoader(train_dataset, batch_size=hp.batch_size, shuffle=True)
@@ -124,7 +119,7 @@ def start_centralized_training(client_id: int, is_test_mode: bool=False):
     centralized_train_eval(context)
 
     mt = context.metrics_tracker
-    plot_accuracy_and_loss(
+    plot_accuracy_and_loss_centralized(
         mt.train_accuracies, mt.train_losses, mt.test_accuracies, mt.test_losses,
         context.client_id, context.hyperparams
     )

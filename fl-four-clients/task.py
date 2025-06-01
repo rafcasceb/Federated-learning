@@ -207,9 +207,18 @@ def plot_loaded_data(data, client_id):
     plt.tight_layout()
     plt.savefig(corr_matrix_path)
     plt.close()
-      
-    
-def _plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
+
+
+
+def _create_paths_acc_and_loss_plots(client_id: int) -> Tuple[str, str]:
+    FOLDER_NAME = "plots"
+    os.makedirs(FOLDER_NAME, exist_ok=True)
+    accuracies_path = os.path.join(FOLDER_NAME, f"training_testing_acc_{client_id}.png")
+    loss_path = os.path.join(FOLDER_NAME, f"training_testing_loss_{client_id}.png")
+    return accuracies_path, loss_path
+
+
+def _plot_training_vs_testing_metric(train_x, train_y, test_x, test_y,
                                        metric_name:str, range_end_round_epochs, save_file_path: str):
     
     train_label = f"Training {metric_name.lower()} (by epochs)"
@@ -218,8 +227,8 @@ def _plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
     x_label = "Epochs"
     y_label = f"Training vs Testing {metric_name.lower()}"
     
-    plt.plot(train_x, train_y, label=train_label)
-    plt.plot(test_x, test_y, label=test_label, marker="o")
+    plt.plot(train_x, train_y, label=train_label, color="#E9839E")
+    plt.plot(test_x, test_y, label=test_label, marker="o", color="#9F3058")
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -231,16 +240,61 @@ def _plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
     plt.close()
 
 
+
 def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc: List[int], test_loss: List[int],
                            client_id: int, hyperparams: HyperParameters):
+    
+    accuracies_path, loss_path = _create_paths_acc_and_loss_plots(client_id)
+    
+    num_rounds = hyperparams.num_rounds
+    num_epochs_by_round = hyperparams.num_epochs
+    num_total_epochs = num_rounds * num_epochs_by_round
+
+    range_num_epochs = range(1, num_total_epochs +1)
+    range_end_round_epochs = range(num_epochs_by_round, num_total_epochs +1, num_epochs_by_round) 
+
+    _plot_training_vs_testing_metric(
+        range_num_epochs, train_acc, 
+        range_end_round_epochs, test_acc,
+        "accuracy", range_end_round_epochs, accuracies_path
+    )
+    _plot_training_vs_testing_metric(
+        range_num_epochs, train_loss,
+        range_end_round_epochs, test_loss,
+        "loss", range_end_round_epochs, loss_path
+    )
+
+
+def plot_accuracy_and_loss_centralized(train_acc: List[int], train_loss: List[int], test_acc: List[int], test_loss: List[int],
+                           client_id: int, hyperparams: HyperParameters):
+    
+    accuracies_path, loss_path = _create_paths_acc_and_loss_plots(client_id)
+    
+    num_epochs = hyperparams.num_epochs
+    range_num_epochs = range(1, num_epochs +1)
+    range_end_epoch = range(num_epochs, num_epochs +1) 
+
+    _plot_training_vs_testing_metric(
+        range_num_epochs, train_acc, 
+        range_end_epoch, test_acc,
+        "accuracy", range_end_epoch, accuracies_path
+    )
+    _plot_training_vs_testing_metric(
+        range_num_epochs, train_loss,
+        range_end_epoch, test_loss,
+        "loss", range_end_epoch, loss_path
+    )
+
+
+
+def plot_accuracy_and_loss_cv(train_acc: List[int], train_loss: List[int], test_acc: List[int], test_loss: List[int],
+                           client_id: int, hyperparams: HyperParameters):
+    
+    accuracies_path, loss_path = _create_paths_acc_and_loss_plots(client_id)
+    
     num_rounds = hyperparams.num_rounds
     num_cross_val_folds_round = hyperparams.num_cross_val_folds
     num_epochs_by_fold = hyperparams.num_epochs
-    
-    folder_name = "plots"
-    os.makedirs(folder_name, exist_ok=True)
-    accuracies_path = os.path.join(folder_name, f"training_testing_acc_{client_id}.png")
-    loss_path = os.path.join(folder_name, f"training_testing_loss_{client_id}.png")
 
     num_epochs_by_round = num_cross_val_folds_round * num_epochs_by_fold
     num_epochs = num_rounds * num_epochs_by_round
@@ -255,12 +309,11 @@ def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc
         test_acc.pop(r*num_cross_val_folds_round -1)
         test_loss.pop(r*num_cross_val_folds_round -1)
         
-    _plot_training_vs_testing_metrics(
+    _plot_training_vs_testing_metric(
         range_num_epochs, train_acc, range_test_epochs, test_acc,
         "accuracy", range_end_round_epochs, accuracies_path
     )
-    
-    _plot_training_vs_testing_metrics(
+    _plot_training_vs_testing_metric(
         range_num_epochs, train_loss, range_test_epochs, test_loss,
         "loss", range_end_round_epochs, loss_path
     )

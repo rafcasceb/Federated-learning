@@ -125,7 +125,6 @@ def _calculate_average_test_metrics(all_labels: List[int], all_predictions: List
         "Balanced accuracy": balanced_acc,
         "MCC": mcc
     }
-    
     context.logger.info("Testing metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
                         accuracy, precision, recall, f1, balanced_acc, mcc)
     return metrics 
