@@ -59,7 +59,8 @@ class HyperParameters:
     output_size: int
     
     num_rounds: int
-    num_cross_val_folds_round: int
+    do_cross_val: bool
+    num_cross_val_folds: int
     num_epochs: int
     test_size: float
     learning_rate: float
@@ -233,7 +234,7 @@ def _plot_training_vs_testing_metrics(train_x, train_y, test_x, test_y,
 def plot_accuracy_and_loss(train_acc: List[int], train_loss: List[int], test_acc: List[int], test_loss: List[int],
                            client_id: int, hyperparams: HyperParameters):
     num_rounds = hyperparams.num_rounds
-    num_cross_val_folds_round = hyperparams.num_cross_val_folds_round
+    num_cross_val_folds_round = hyperparams.num_cross_val_folds
     num_epochs_by_fold = hyperparams.num_epochs
     
     folder_name = "plots"

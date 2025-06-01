@@ -181,7 +181,6 @@ def main():
     )
 
     _save_round_metrics_json(context)
-
     logger.info("Closing FL server...")
 
 
