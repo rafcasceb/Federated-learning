@@ -168,7 +168,7 @@ def create_logger(file_name: str, max_bytes: int=10_000_000, backup_count: int=1
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s:  %(message)s')
     handler = RotatingFileHandler(filename=file_path, maxBytes=max_bytes, backupCount=backup_count)
-    handler.namer = lambda filename: filename.replace(".log.", ".") + ".log"  # Modify naming convention: logfile.log.1 → logfile.1.log
+    handler.namer = lambda filename: filename.replace(".log.", ".") + ".log"  # Rename: logfile.log.1 -> logfile.1.log
     handler.setFormatter(formatter)
 
     if logger.hasHandlers():

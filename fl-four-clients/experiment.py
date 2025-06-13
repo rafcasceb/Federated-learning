@@ -9,8 +9,8 @@ from typing import Dict
 
 
 
-NUM_RUNS = 2
-NUM_CLIENTS = 4
+NUM_RUNS = 6
+NUM_CLIENTS = 3
 SERVER_SCRIPT = "server.py"
 CLIENT_MANAGER = "client_manager.py"
 FOLDER = "logs"
@@ -118,19 +118,20 @@ def _append_average_and_std_metrics(results_file_path: str):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="description: run Federated Learning experiments")
+    parser.add_argument("--test", action="store_true", help="Run in Test mode (some lightweight configs for non-deterministic reproducibility)")
+    args = parser.parse_args()
+    
     file_path = os.path.join(FOLDER, RESULTS_FILE)
     file_exists = os.path.exists(file_path)
     if file_exists:
         os.remove(file_path)
-        
-    parser = argparse.ArgumentParser(description="Run Federated Learning experiments")
-    parser.add_argument("--test", action="store_true", help="Run in Test mode (some lightweight configs for non-deterministic reproducibility)")
-    args = parser.parse_args()
+
     is_test_mode = args.test
-        
+
     for run_id in range(1, NUM_RUNS + 1):
         _run_one_experiment(run_id, is_test_mode)
-    
+        
     _append_average_and_std_metrics(file_path)
 
 

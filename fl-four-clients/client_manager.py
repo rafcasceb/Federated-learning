@@ -136,11 +136,11 @@ def main():
     # python client_manager.py stop 
     # python client_manager.py list 
     
-    parser = argparse.ArgumentParser(description="Manage federated clients (start/stop/list)")
+    parser = argparse.ArgumentParser(description="description: manage federated clients (start/stop/list)")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # start subcommand
-    start_parser = subparsers.add_parser("start", help="Start a number of clients")
+    start_parser = subparsers.add_parser("start", help="Start the specified number of clients (start <NUM_CLIENTS>)")
     start_parser.add_argument("num_clients", type=int, nargs="?", default=3, help="Number of clients to start")
     start_parser.add_argument("--test", action="store_true", help="Run clients in test mode")
 

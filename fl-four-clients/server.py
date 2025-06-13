@@ -39,7 +39,7 @@ def _create_fn_weighted_average(context: ServerContext):
 
         logger.info(
             f"Round metrics -- " + ", ".join(
-                [f"{metric}: {aggregated_metrics[metric]:.2f}" for metric in METRICS_NAMES]
+                [f"{metric}: {aggregated_metrics[metric]:.3f}" for metric in METRICS_NAMES]
             )
         )
         
@@ -142,7 +142,7 @@ def _configure_server(context: ServerContext) -> Tuple[ServerConfig, FedProxSave
     strategy = FedProxSaveModel(
         model = model,
         logger = context.logger,
-        fraction_fit = hp.fraction_fit,                     # fraction of clients that will be sampled per round
+        fraction_fit = hp.fraction_fit,                     # fraction of clients sampled per round
         fraction_evaluate = hp.fraction_evaluate,           # fraction of clients sampled for evaluation
         min_fit_clients = hp.min_fit_clients,               # minimum of clients in a training round
         min_evaluate_clients = hp.min_evaluate_clients,     # minimum of clients for evaluation

@@ -125,7 +125,7 @@ def _calculate_average_test_metrics(all_labels: List[int], all_predictions: List
         "Balanced accuracy": balanced_acc,
         "MCC": mcc
     }
-    context.logger.info("Testing metrics -- Accuracy: %.2f, Precision: %.2f, Recall: %.2f, F1 score: %.2f, Balanced accuracy: %.2f, MCC: %.2f",
+    context.logger.info("Testing metrics -- Accuracy: %.3f, Precision: %.3f, Recall: %.3f, F1 score: %.3f, Balanced accuracy: %.3f, MCC: %.3f",
                         accuracy, precision, recall, f1, balanced_acc, mcc)
     return metrics 
 
@@ -142,7 +142,7 @@ def test(model: nn.Module, test_data: DataLoader, context: ClientContext) -> Tup
     with torch.no_grad():  # Disable gradient tracking
         for inputs, labels in test_data:
             # Realize prediction
-            outputs = torch.sigmoid(model(inputs)).squeeze()  # Apply sigmoid activation to transform logits in usable predictions
+            outputs = torch.sigmoid(model(inputs)).squeeze()  # Sigmoid activation to transform logits into usable predictions
             #! print("Raw outputs:", outputs)
             predictions = (outputs > hp.binarization_threshold).float()  # Binarize predictions
             #! print("Binary outputs (predictions):", predictions)
@@ -180,6 +180,7 @@ class FlowerClient(NumPyClient):
         
         self.context.logger.info("Client initialized.")
     
+    #! TODO: Probar a quitar los config de estos tres métodos
     def get_parameters(self, config: Dict[str,Any]) -> List[np.ndarray]:
         self.context.logger.info("Fetching model parameters...")
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
