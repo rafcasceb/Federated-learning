@@ -213,8 +213,8 @@ def plot_loaded_data(data, client_id):
 def _create_paths_acc_and_loss_plots(client_id: int) -> Tuple[str, str]:
     FOLDER_NAME = "plots"
     os.makedirs(FOLDER_NAME, exist_ok=True)
-    accuracies_path = os.path.join(FOLDER_NAME, f"training_testing_acc_{client_id}.png")
-    loss_path = os.path.join(FOLDER_NAME, f"training_testing_loss_{client_id}.png")
+    accuracies_path = os.path.join(FOLDER_NAME, f"train_test_acc_{client_id}.png")
+    loss_path = os.path.join(FOLDER_NAME, f"train_test_loss_{client_id}.png")
     return accuracies_path, loss_path
 
 
@@ -227,8 +227,8 @@ def _plot_training_vs_testing_metric(train_x, train_y, test_x, test_y,
     x_label = "Epochs"
     y_label = f"Training vs Testing {metric_name.lower()}"
     
-    plt.plot(train_x, train_y, label=train_label, color="#E9839E")
-    plt.plot(test_x, test_y, label=test_label, marker="o", color="#9F3058")
+    plt.plot(train_x, train_y, label=train_label, color="#E06989") #E9839E
+    plt.plot(test_x, test_y, label=test_label, marker="o", color="#309F69") #9F3058
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
