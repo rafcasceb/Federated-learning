@@ -220,9 +220,14 @@ def client_fn(excel_file_name: str, temp_csv_file_name:str, context: ClientConte
     if x.shape[1] != hp.input_size:
         context.logger.warning(f"Input size mismatch: data has {x.shape[1]}, but config has {hp.input_size}.")
 
+    if context.hyperparams.test_size is None:
+        test_size = 0.2
+    else:
+        test_size = context.hyperparams.test_size
+
     x_train, x_test, y_train, y_test = train_test_split(
         x, y,
-        test_size = context.hyperparams.test_size,
+        test_size = test_size,
         random_state = context.random_state.random_seed
     )
     train_dataset = TensorDataset(x_train, y_train)
