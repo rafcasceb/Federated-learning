@@ -24,7 +24,8 @@ from torchmetrics.classification import BinaryAccuracy
 
 
 CONFIGURATION_FILE = "config.yaml"
-
+SERVER_IP = "192.168.18.12"
+SERVER_PORT = "8081"
 
 
 
@@ -277,11 +278,8 @@ def start_flower_client(client_id: int, is_test_mode: bool=False):
         return
     
     configure_environment(context)
-    
-    server_ip = "192.168.18.12"
-    server_port = "8081"
-    server_address = f"{server_ip}:{server_port}"
-    
+
+    server_address = f"{SERVER_IP}:{SERVER_PORT}"
     start_client(
         server_address=server_address,
         client=client_fn(excel_file_name, temp_csv_file_name, context),
