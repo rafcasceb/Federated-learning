@@ -171,6 +171,9 @@ python centralized.py
 
 Este proyecto ha sido desarrollado con fines académicos. Para cualquier otro uso, por favor contacte con el autor.
 
+Licencia CC Reconocimiento - NoComercial - SinObraDerivada (BY-NC-ND): No se permite un 
+uso comercial de la obra original ni la generación de obras derivadas.  
+
 ---
 
 ## Referencia
