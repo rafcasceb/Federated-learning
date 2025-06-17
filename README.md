@@ -56,6 +56,9 @@ Se recomienda trabajar dentro de un entorno virtual para evitar conflictos con o
 python -m venv venv          # Crear entorno
 venv\Scripts\activate        # Activar entorno
 deactivate                   # Desactivar entorno
+
+rmdir /s /q venv                      # Para borrar recursiva y silenciosamente en CMD
+Remove-Item -Recurse -Force .\venv    # Para borrar recursiva y silenciosamente en Powershell
 ```
 
 **En Linux (Ubuntu) o macOS:**
@@ -64,6 +67,12 @@ deactivate                   # Desactivar entorno
 python -m venv venv          # Crear entorno
 source venv/bin/activate     # Activar entorno
 deactivate                   # Desactivar entorno
+rm -rf venv                  # Para borrar, recursiva y silenciosamente
+```
+
+Si la ejecución de scripts está deshabilitada en el sistema, probar con el comando:
+```bash
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
 Una vez activado el entorno, instalar las dependencias con:
