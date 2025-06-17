@@ -1,0 +1,104 @@
+------------
+INTRODUCCIÓN
+------------
+Este proyecto contiene una implementación de un sistema de aprendizaje automático federado y centralizado. Permite también comparar los enfoques.
+
+Una vez preparado el entorno de ejecución (ver compila.txt de la carpeta /código), se puede proceder ya a configurar y ejecutar el sistema.
+
+Primero se comenta la estructura de la implementación del sistema.
+Luego, la configuración de los procesos de aprendizaje mediante el archivo de configuración config.yaml.
+Después, la ejecución del sistema para llevar a cabo procesos de aprendizaje federado.
+Tras esto, la ejección del sistema para llevar a cabo procesos de aprendizaje centralizado.
+Y por último, dónde se pueden ver los resultados del sistema.
+
+
+-----------------------
+ESTRUCTURA DEL SISTEMA
+-----------------------
+El repositorio está organizado en los siguientes archivos y carpetas:
+
+Carpetas:
+	/aggregated_models/: (autogenerada) almacena los pesos de los modelos agregados por el servidor en el aprendizaje federado.
+	/data/: contiene los datos locales utilizados por cada cliente y el nodo centralizado.
+	/logs/: (autogenerada) guarda los registros de ejecución, resultados de los experimentos y otros ficheros temporales.
+	/plots/: (autogenerada) contiene los gráficos generados durante la ejecución, tanto para visualizar propiedades de los datos como los resultados del aprendizaje.
+
+Archivos principales
+	centralized.py: script para ejecutar el sistema en modo de aprendizaje centralizado.
+	client_app.py: lógica común a todos los clientes del aprendizaje federado.
+	client_1.py, client_2.py, etc.: scripts para lanzar cada cliente de forma individual, ejecutan `client_app.py` con su respectivo identificador.
+	client_manager.py: herramienta para gestionar automáticamente la ejecución de múltiples clientes (inicio, seguimiento y parada).
+	model.py: definición del modelo de red neuronal compartido entre clientes, servidor y nodo centralizado.
+	strategy.py: implementación de la estrategia de agregación del servidor federado.
+	server.py: script que ejecuta el servidor central del sistema federado.
+	task.py: contiene utilidades auxiliares como gestión de logs, generación de gráficos y manejo del contexto de ejecución.
+
+Archivos de configuración
+	config.yaml: archivo principal de configuración. Permite definir los parámetros de ejecución para los experimentos, como el número de rondas, la estrategia de agregación, los modelos a utilizar, el número de clientes, etc. Puede modificarse para ajustar fácilmente el comportamiento del sistema sin necesidad de cambiar el código.
+	requirements.txt: lista de dependencias necesarias para ejecutar el proyecto.
+
+
+
+-------------
+CONFIGURACIÓN
+-------------
+El comportamiento del sistema puede ajustarse mediante el archivo de configuración `config.yaml`, donde se definen aspectos como el número de rondas de entrenamiento, el número de clientes o el modo de ejecución.
+
+El socket del servidor se ha de configurar en el mismo archivo, determinando una IP privada y un puerto libre.
+Para conocer la IP privada se puede utilizar:
+Windows:
+	$  ipconfig
+Ubuntu (Linux):
+	$  hostname -I
+
+
+
+---------------------------------
+EJECUCIÓN DE APRENDIZAJE FEDERADO
+---------------------------------
+Nota: La base de datos en /data/ está dividida para 4 clientes. Para usar más, se requiere particionado adicional manual.
+
+Opción A:
+Lanzamiento manual (una terminal por proceso)
+	$  python server.py
+	$  python client_1.py
+	$  python client_2.py
+	$  python client_3.py
+	$  python client_4.py
+
+
+Opción B: 
+Lanzamiento y gestión automáticos de clientes con client_manager.py (una terminal para servidor y otra para gestor)
+	$  python server.py
+	$  python client_manager.py start <NUM_CLIENTS>
+El gestor de clientes incluye adicionalmente dos comandos para listar y borrar clientes:
+	$  python client_manager.py list
+	$  python client_manager.py stop
+
+
+Opción C:
+Ejecución de experimento completo (script autónomo)
+	$  python experiment.py
+Para lanzar pruebas reproducibles:
+	$  python experiment.py --test
+Se puede configurar el experimento en el propio archivo.
+
+
+
+-------------------------------------
+EJECUCIÓN DE APRENDIZAJE CENTRALIZADO
+-------------------------------------
+Ejecutar directamente:
+	$  python centralized.py
+
+
+
+-------------------------------------
+EJECUCIÓN DE APRENDIZAJE CENTRALIZADO
+-------------------------------------
+Como ya se ha comentado en la estructura del producto, los resultados generados durante la ejecución se almacenan automáticamente en las siguientes carpetas:
+	/logs/ – métricas, registros, ficheros auxiliares
+	/plots/ – gráficas de pérdida y precisión
+	/aggregated_models/ – pesos de los modelos federados
+
+La terminal también puede resultar de interés para ver el proceso del framework Flower.

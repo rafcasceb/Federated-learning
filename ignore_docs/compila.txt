@@ -1,0 +1,43 @@
+------------
+INTRODUCCIÓN
+------------
+Este proyecto no requiere de ningún proceso manual de compilación, ya que está desarrollado en Python (versión 3.10.11).
+
+Para preparar el entorno de ejecución, se recomienda crear un entorno virtual e instalar las dependencias incluidas en el archivo requirements.txt.
+Este archivo de dependencias se adjunta en esta carpeta.
+
+
+
+---------------------------
+CREACIÓN DE ENTORNO VIRTUAL
+---------------------------
+En Windows:
+	$  python -m venv venv          # Crear entorno
+	$  venv\Scripts\activate        # Activar entorno
+	$  deactivate                   # Desactivar entorno al final
+
+	$  rmdir /s /q venv                      # Para borrar recursiva y silenciosamente en CMD
+	$  Remove-Item -Recurse -Force .\venv    # Para borrar recursiva y silenciosamente en Powershell
+
+
+En Linux (Ubuntu):
+	$  python -m venv venv          # Crear entorno
+	$  source venv/bin/activate     # Activar entorno
+	$  deactivate                   # Desactivar entorno
+	
+	$  rm -rf venv                  # Para borrar recursiva y silenciosamente
+
+
+Si la ejecución de scripts está deshabilitada en el sistema y no se puede crear el entorno virtual, probar con el comando:
+	$  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+
+
+---------------------------
+INSTALACIÓN DE DEPENDENCIAS
+---------------------------
+Una vez activado el entorno, instalar las dependencias con:
+	$  pip install -r requirements.txt
+
+Tras esto, el entorno estará listo para la ejecución.
+

@@ -61,12 +61,13 @@ rmdir /s /q venv                      # Para borrar recursiva y silenciosamente 
 Remove-Item -Recurse -Force .\venv    # Para borrar recursiva y silenciosamente en Powershell
 ```
 
-**En Linux (Ubuntu) o macOS:**
+**En Linux (Ubuntu)**
 
 ```bash
 python -m venv venv          # Crear entorno
 source venv/bin/activate     # Activar entorno
 deactivate                   # Desactivar entorno
+
 rm -rf venv                  # Para borrar, recursiva y silenciosamente
 ```
 
