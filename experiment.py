@@ -9,8 +9,8 @@ from typing import Dict
 
 
 
-NUM_RUNS = 6
-NUM_CLIENTS = 3
+NUM_RUNS = 3
+NUM_CLIENTS = 2
 SERVER_SCRIPT = "server.py"
 CLIENT_MANAGER = "client_manager.py"
 FOLDER = "logs"
