@@ -72,7 +72,12 @@ class HyperParameters:
     min_evaluate_clients: int
     min_available_clients: int
     proximal_mu: float
-
+    
+    server_ip: str
+    server_port: str
+    @property
+    def server_address(self) -> str:
+        return f"{self.server_ip}:{self.server_port}"
 
 @dataclass
 class MetricsTracker:

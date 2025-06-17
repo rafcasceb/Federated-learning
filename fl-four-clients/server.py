@@ -18,8 +18,6 @@ MODELS_FOLDER = "aggregated_models"
 MODELS_FILE_PATTERN = "server_model_weights_r*.pt"
 METRICS_FOLDER = "logs"
 METRICS_FILE = "final_aggr_metrics.json"
-SERVER_IP = "192.168.18.12"
-SERVER_PORT = "8081"
 
 
 
@@ -168,8 +166,8 @@ def main():
     context = load_server_context(logger, CONFIGURATION_FILE)
     
     logger.info("Starting FL server...")
-    
-    server_address = f"{SERVER_IP}:{SERVER_PORT}"
+
+    server_address = context.hyperparams.server_address
     config, strategy = _configure_server(context)
     logger.info("Server configuration complete. Listening on %s", server_address)
 

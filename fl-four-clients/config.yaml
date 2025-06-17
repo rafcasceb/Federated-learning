@@ -9,7 +9,7 @@ output_size: 1
 num_rounds: 5 #20 #10
 do_cross_val: False
 num_cross_val_folds: 2 #5 #3
-num_epochs: 200 #50 #20
+num_epochs: 10 #50 #20
 test_size: 0.2
 learning_rate: 0.0001
 binarization_threshold: 0.4
@@ -17,7 +17,11 @@ binarization_threshold: 0.4
 # Strategy
 fraction_fit: 1.0         # fraction of clients that will be sampled per round
 fraction_evaluate: 1.0    # fraction of clients sampled for evaluation
-min_fit_clients: 4        # minimum of clients in a training round
-min_evaluate_clients: 4   # minimum of clients for evaluation
-min_available_clients: 4  # minimum of clients to stablish connection
+min_fit_clients: 2        # minimum of clients in a training round
+min_evaluate_clients: 2   # minimum of clients for evaluation
+min_available_clients: 2  # minimum of clients to stablish connection
 proximal_mu: 0.01         # regularization strength
+
+# Server
+server_ip: "192.168.18.12"
+server_port: "8081"
